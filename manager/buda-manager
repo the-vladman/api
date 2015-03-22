@@ -1,0 +1,8 @@
+#! /usr/bin/env node
+
+// Executable file
+// - 'buda_manager' module should be installed globally on the host machine
+// - this file should be placed somewhere in the PATH
+var BudaManager = require( './buda_manager' );
+var manager = new BudaManager();
+manager.start();
