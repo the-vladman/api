@@ -18,6 +18,7 @@
 
 // Load required modules
 var _        = require( 'underscore' );
+var fs       = require( 'fs' );
 var Hapi     = require( 'hapi' );
 var spawn    = require( 'child_process' ).spawn;
 var minimist = require( 'minimist' );
@@ -269,6 +270,22 @@ BudaManager.prototype.start = function() {
   _.each( this.config, function( val, key ) {
     log( key + ': ' + val );
   });
+  
+  // Home directory validations
+  log( 'Verifying working directory', true );
+  log( 'Verify home directory exist' );
+  if( ! fs.existsSync( this.config.home ) ) {
+    log( 'Home directory does not exist', true, 'red' );
+    process.exit();
+  }
+  
+  log( 'Verify home directory is readable and writeable' );
+  try {
+    fs.accessSync( this.config.home, fs.R_OK | fs.W_OK );
+  } catch( err ) {
+    log( 'Home directory is not accesable by the process', true, 'red' );
+    process.exit();
+  }
   
   // Move process to working directory
   log( 'Moving process to working directory', true );
