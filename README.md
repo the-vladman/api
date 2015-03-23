@@ -21,7 +21,7 @@ __Zones:__ csv_sample.zone
 Puntos destinados a la recepción de datos; se describen mediante un archivo
 de especifición (JSON); estos archivos son utilizados por el manager para
 crear agentes; un agente es asignado a cada zona; cada zona es asignada
-un ID que se calcula a partir del SHA del archivo utilizado para crearla
+un ID que se calcula como un SHA a partir del archivo utilizado para crearla
 
 __Agents:__ buda-agent-{data.type}
 
@@ -43,7 +43,7 @@ consultas de toda la información procesada y almancenada en las distintas zonas
 - Cada componente de la arquitectura es independiente, el mantenimiento del proyecto
   es sencillo y se puede realizar en paralelo en distintos frentes
 - Para agregar soporte a distintos tipos de datos ( XML, feeds, etc ) basta con escribir
-  un agente adecuado por lo que la plataforma es sumamente extensible
+  un agente adecuado por lo que la plataforma es extensible
 - Implementar esta arquitectura como un ambiente de microservicios es simple porque todas
   las capas estan bien delimitadas, son sencillas e independientes entre sí
 - El eje central de la arquitectura es la especificación de zona y esto puede desarrollarse
@@ -59,6 +59,10 @@ consultas de toda la información procesada y almancenada en las distintas zonas
   en el cluster de forma relativamente sencilla
 - Las zonas son solo un archivo JSON por lo que implementar herramientas visuales para
   diseñarlas es trivial
+- Ya que las zonas son archivos de texto plano se puede montar un sistema de entrega continua
+  de forma sencilla, por ejemplo: las zonas se almacenan en un repositorio Git, se configuran
+  hooks de 'pre' y 'post' update que mediante al manager 'detienen' y/o '(re)inician' las zonas
+  que han sido modificadas
 - El manager implementa una interfaz RESTful HTTP para comunicarse con el master por lo que
   implementar herramientas visuales para administrarlos es trivial
 - Las zonas incluyen un elemento llamada "hotspot" que no es mas que el endpoint del stream
@@ -78,7 +82,7 @@ Bucket CSV-UNIX-mongo sample:
 
 ```
 {
-  "version: "0.1",
+  "version": "0.1",
   "metadata": {
     "name": "CSV Sample",
     "description": "Just a sample CSV zone",
@@ -90,15 +94,15 @@ Bucket CSV-UNIX-mongo sample:
   },
   "data": {
     "type": "csv",
-    "details": {
-      "separator: ","
+    "options": {
+      "separator": ","
     }
   },
   "storage": {
     "type": "mongodb",
-    "details": {
+    "options": {
       "host": "localhost:27017",
-      "database": "prueba"
+      "db": "prueba",
       "collection": "codigosPostales",
       "index": "d_codigo"
     }
@@ -107,8 +111,7 @@ Bucket CSV-UNIX-mongo sample:
     "type": "stdout"
   },
   "hotspot": {
-    type: "unix",
-    location: "cvs-sample.sock"
+    "type": "unix"
   },
   "extras": {}
 }
@@ -118,7 +121,7 @@ Bucket GeoJSON-TCP-mongo sample:
 
 ```
 {
-  "version: "0.1",
+  "version": "0.1",
   "metadata": {
     "name": "GeoJSON Sample",
     "description": "Just a sample GeoJSON zone",
@@ -130,7 +133,7 @@ Bucket GeoJSON-TCP-mongo sample:
   },
   "data": {
     "type": "geojson",
-    "details": {
+    "options": {
       "pointer": "features.*",
       "removeAltitude": true,
       "removeDuplicatePoints": true
@@ -138,9 +141,9 @@ Bucket GeoJSON-TCP-mongo sample:
   },
   "storage": {
     "type": "mongodb",
-    "details": {
+    "options": {
       "host": "localhost:27017",
-      "database": "prueba"
+      "db": "prueba",
       "collection": "callesVeracruz"
     }
   },
@@ -148,8 +151,7 @@ Bucket GeoJSON-TCP-mongo sample:
     "type": "stdout"
   },
   "hotspot": {
-    type: "tcp",
-    location: "37001"
+    "type": "tcp"
   },
   "extras": {}
 }
