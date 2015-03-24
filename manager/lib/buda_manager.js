@@ -22,9 +22,8 @@ var util     = require( 'util' );
 var Hapi     = require( 'hapi' );
 var crypto   = require( 'crypto' );
 var spawn    = require( 'child_process' ).spawn;
-var minimist = require( 'minimist' );
 var colors   = require( 'colors/safe' );
-var info     = require( './package' );
+var info     = require( '../package' );
 
 // Utility method to output style-rich and uniform messages
 function log( msg, bold, color ) {
@@ -54,7 +53,7 @@ function getID( zone ) {
 }
 
 // Constructor method
-function BudaManager() {
+function BudaManager( config ) {
   // Runtime zones list
   this.zones = [];
   
@@ -62,7 +61,7 @@ function BudaManager() {
   this.agents = [];
   
   // Runtime configuration holder
-  this.config = {};
+  this.config = _.defaults( config, BudaManager.DEFAULTS );
   
   // API interface
   this.restapi = new Hapi.Server({
@@ -71,37 +70,17 @@ function BudaManager() {
       sampleInterval: 5000
     }
   });
-  
-  // Default config values
-  // - The 'home' directory must be readable and writable by the user
-  //   starting the daemon.
-  // - Only 'root' can bind to ports lower than 1024 but running this
-  //   process as a privileged user is not advaised ( or required )
-  this.DEFAULTS = {
-    home: '/home/buda/',
-    port: 8000,
-    list: 'zones.conf'
-  };
 }
 
-// Determine runtime configuration: defaults | ENV | CLI
-BudaManager.prototype._loadConfig = function() {
-  var config = this.DEFAULTS;
-  _.each( this.DEFAULTS, function( val, key ) {
-    if( process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ] ) {
-      config[ key ] = process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ];
-    }
-  });
-  config = minimist( process.argv.slice( 2 ), { 'default': config });
-  delete config._;
-  
-  // Looking for help ?
-  if( _.has( config, 'h' ) || _.has( config, 'help' ) ) {
-    this.printHelp();
-    process.exit();
-  }
-  
-  this.config = config;
+// Default config values
+// - The 'home' directory must be readable and writable by the user
+//   starting the daemon.
+// - Only 'root' can bind to ports lower than 1024 but running this
+//   process as a privileged user is not advaised ( or required )
+BudaManager.DEFAULTS = {
+  home: '/home/buda/',
+  port: 8000,
+  list: 'zones.conf'
 };
 
 // Apply verifications to the home/working directory
@@ -239,7 +218,6 @@ BudaManager.prototype._startAgent = function( zone ) {
 // Retrive a list of all zones in play
 BudaManager.prototype._getZoneList = function() {
   log( 'Retrieving zones list', true );
-  
   log( 'List retrieved', true, 'green' );
   return this.zones;
 };
@@ -349,7 +327,7 @@ BudaManager.prototype._cleanUp = function() {
 BudaManager.prototype.printHelp = function() {
   log( 'Usage information', true, 'gray' );
   log( 'Available configuration options are:', false, 'gray' );
-  _.each( this.DEFAULTS, function( val, key ) {
+  _.each( BudaManager.DEFAULTS, function( val, key ) {
     log( key + '\t' + val, false, 'gray' );
   });
 };
@@ -358,8 +336,13 @@ BudaManager.prototype.printHelp = function() {
 BudaManager.prototype.start = function() {
   log( 'Buda Manager ver. ' + info.version, true, 'green' );
   
-  // Get configuration to use
-  this._loadConfig();
+  // Looking for help ?
+  if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
+    this.printHelp();
+    process.exit();
+  }
+  
+  // Log config
   log( 'Starting with PID: ' + process.pid, true );
   log( 'Parameters', true );
   _.each( this.config, function( val, key ) {
@@ -379,7 +362,6 @@ BudaManager.prototype.start = function() {
   this._startInterface();
   
   // Log final output
-  log( 'version: ' + this.restapi.version, false, 'gray' );
   _.each( this.restapi.info, function( val, key ) {
     log( key + ': ' + val, false, 'gray' );
   });

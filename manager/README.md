@@ -8,6 +8,24 @@ Make the application a system service
 
 `/etc/systemd/system/buda-manager.service`
 
+```
+[Unit]
+Description=Buda manager process
+After=network.target
+
+[Service]
+ExecStart=buda-manager
+Restart=always
+User=buda
+Group=buda
+Environment=PATH=/usr/bin:/usr/local/bin
+Environment=NODE_ENV=production
+WorkingDirectory=/home/buda
+
+[Install]
+WantedBy=multi-user.target
+```
+
 - __Update services list:__
 
 `systemctl daemon-reload`

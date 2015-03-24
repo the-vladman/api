@@ -1,11 +1,7 @@
 {
   "name": "buda-manager",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Manager process for the 'BUDA' platform",
-  "main": "index.js",
-  "scripts": {
-    "test": "npm test"
-  },
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
   "dependencies": {

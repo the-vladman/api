@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+// Buda Manager ( bin )
+// ====================
+// CLI program to run a buda-manager instance
+
+// Set process name
+'use strict';
+process.title = 'buda-manager';
+
+// Dependencies
+var _           = require( 'underscore' );
+var minimist    = require( 'minimist' );
+var BudaManager = require( '../lib/buda_manager' );
+
+// Determine runtime configuration: defaults | ENV | CLI
+var config = _.clone( BudaManager.DEFAULTS );
+_.each( config, function( val, key ) {
+  if( process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ] ) {
+    config[ key ] = process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ];
+  }
+});
+config = minimist( process.argv.slice( 2 ), { 'default': config });
+delete config._;
+
+// Create and start manager instance
+var manager = new BudaManager( config );
+manager.start();
