@@ -1,0 +1,11 @@
+{
+  "name": "buda-agent",
+  "version": "0.1.0",
+  "description": "Base template for Buda Agents",
+  "author": "Ben Cessa <ben@pixative.com>",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.1.1",
+    "underscore": "^1.8.2"
+  }
+}

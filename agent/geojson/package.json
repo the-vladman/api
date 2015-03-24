@@ -1,0 +1,16 @@
+{
+  "name": "buda-agent-geojson",
+  "version": "0.1.0",
+  "description": "Buda Agent for GeoJSON processing",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "Ben Cessa <ben@pixative.com>",
+  "license": "MIT",
+  "dependencies": {
+    "JSONStream": "^0.10.0",
+    "geojson-validation": "^0.1.5",
+    "mongoose": "^3.8.25",
+    "underscore": "^1.8.2"
+  }
+}

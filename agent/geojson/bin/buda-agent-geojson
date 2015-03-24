@@ -1,0 +1,23 @@
+#! /usr/bin/env node
+
+// Enable strict syntax mode
+'use strict';
+
+// Requirements
+var minimist = require( 'minimist' );
+var BudaGeoJSONAgent = require( '../lib/buda_agent_geojson' );
+
+// Get runtime configuration
+var params = minimist( process.argv.slice( 2 ) );
+delete params._;
+if( params.conf === undefined ) {
+  throw new Error( 'MISSING_CONFIGURATION' );
+}
+var config = JSON.parse( params.conf );
+
+// Set process title
+process.title = 'buda-agent-geojson: ' + config.id;
+
+// Start agent
+var agent = new BudaGeoJSONAgent( config );
+agent.start();
