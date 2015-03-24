@@ -1,0 +1,34 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "CSV Sample",
+    "description": "Just a sample CSV zone",
+    "author": "Ben Cessa",
+    "organization": "Mexico Abierto",
+    "website": "mxabierto.org",
+    "email": "ben@pixative.com",
+    "phone": ""
+  },
+  "data": {
+    "type": "csv",
+    "options": {
+      "separator": ","
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "host": "localhost:27017",
+      "db": "prueba",
+      "collection": "codigosPostales",
+      "index": "d_codigo"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "unix"
+  },
+  "extras": {}
+}

@@ -1,0 +1,35 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "GeoJSON Sample",
+    "description": "Just a sample GeoJSON zone",
+    "author": "Ben Cessa",
+    "organization": "Mexico Abierto",
+    "website": "mxabierto.org",
+    "email": "ben@pixative.com",
+    "phone": ""
+  },
+  "data": {
+    "type": "geojson",
+    "options": {
+      "pointer": "features.*",
+      "removeAltitude": true,
+      "removeDuplicatePoints": true
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+        "host": "localhost:27017",
+        "db": "prueba",
+        "collection": "callesVeracruz"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "unix"
+  },
+  "extras": {}
+}
