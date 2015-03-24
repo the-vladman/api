@@ -1,29 +1,27 @@
 Make the application a system service
 
-__Install the service:__ `/etc/systemd/system/buda-manager.service`
+- __Create user/group/home__
 
-```
-[Unit]
-Description=Buda manager process
-After=network.target
+- __Install binaries on PATH__
 
-[Service]
-ExecStart=/home/buda/manager/index.js
-Restart=always
-User=buda
-Group=buda
-Environment=PATH=/usr/bin:/usr/local/bin
-Environment=NODE_ENV=production
-WorkingDirectory=/home/buda
+- __Install the service:__ 
 
-[Install]
-WantedBy=multi-user.target
-```
+`/etc/systemd/system/buda-manager.service`
 
-__Update services list:__ `systemctl daemon-reload`
+- __Update services list:__
 
-__Allow to run at boot:__ `systemctl enable buda-manager`
+`systemctl daemon-reload`
 
-__Start the service:__ `systemctl start buda-manager`
+- __Allow to run at boot:__
 
-__Inspect logs in real-time:__ `journalctl --follow -u buda-manager`
+`
+systemctl enable buda-manager`
+
+- __Start the service:__
+
+`
+systemctl start buda-manager`
+
+- __Inspect logs in real-time:__
+
+`journalctl --follow -u buda-manager`
