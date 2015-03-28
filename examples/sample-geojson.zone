@@ -29,7 +29,8 @@
     "type": "stdout"
   },
   "hotspot": {
-    "type": "unix"
+    "type": "tcp",
+    "location": 37001
   },
   "extras": {}
 }

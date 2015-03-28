@@ -1,7 +1,30 @@
 #BUDA
 -----
 
-Bus de datos abiertos
+Bus de Datos Abiertos
+
+### FAQ
+
+__Qué se pretende?__
+
+Definir un diseño modular para la plataforma que cumpla con los requerimientos de la misma basado en la filosofia de UNIX: 
+> Pequeños programas que hacen una cosa y la hacen bien. [+](http://en.wikipedia.org/wiki/Unix_philosophy#Program_Design_in_the_UNIX_Environment)
+
+__Diseño != Implementación__
+
+Prioritariamente se debe trabajar e invertir tiempo en la definición, refinación y justificación del diseño; pensado desde el punto de vista de la plataforma y agnostico a algúna tecnología especifica; debe ser lo mas sencillo y claro posible.
+
+__Cuales son las metas principales a alcanzar?__
+
+Idealmente la plataforma debe:
+
+- Poder procesar de forma independiente datos en distintos formatos y de distintas fuentes
+- Ser facilmente extensible en el futuro para soportar distintos formatos y fuentes de datos
+- Realizar el procesamiento de forma eficiente en terminos de consumo de recursos ( CPU, memoria, etc ) para poder trabajar con grandes cargas de datos
+- Idealmente deberia soportar [streams](http://goo.gl/Tp9Dm) de datos para eficientar el manejo de grandes cantidades de información
+- Presentar un API tipo REST para poder consultar de forma flexible y eficiente los datos procesados y almacenados
+- Permitir el desarrollo de herramientas visuales para tareas de administración y consumo de información
+- Ser agnostica en cuanto a tecnología de forma que sus componentes puedan ser escritos incluso en distintos lenguajes de programación favoreciendo así un diseño [loosely coupled](http://en.wikipedia.org/wiki/Loose_coupling)
 
 ### Arquitectura
 
