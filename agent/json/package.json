@@ -1,0 +1,14 @@
+{
+  "name": "buda-agent-json",
+  "version": "0.1.0",
+  "description": "Buda Agent for JSON processing",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "Ben Cessa <ben@pixative.com>",
+  "license": "MIT",
+  "dependencies": {
+    "JSONStream": "^0.10.0",
+    "mongoose": "^3.8.25"
+  }
+}
