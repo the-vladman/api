@@ -1,0 +1,13 @@
+{
+  "name": "buda-agent-xml",
+  "version": "0.1.0",
+  "description": "Buda Agent for XML processing",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "Ben Cessa <ben@pixative.com>",
+  "license": "MIT",
+  "dependencies": {
+    "xml-flow": "^0.1.5"
+  }
+}

@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dataset version='2' net='TKT' type='raw' tz='PST8'>
+	<station id='TKT' AQS='800020017' name='Tecate' ltime='20140129T12'>
+		<samples var='O3' units='ppb'>
+			<d>070.6</d>
+		</samples>
+		<samples var='NOx' units='ppb'>
+			<d>009.6</d>
+		</samples>
+		<samples var='NO' units='ppb'>
+			<d>002.6</d>
+		</samples>
+		<samples var='NO2' units='ppb'>
+			<d>008.3</d>
+		</samples>
+		<samples var='CO' units='ppm'>
+			<d>00.22</d>
+		</samples>
+		<samples var='WSP' units='mph'>
+			<d>005.8</d>
+		</samples>
+		<samples var='WDR' units='°A'>
+			<d>165.3</d>
+		</samples>
+		<samples var='TMP' units='°C'>
+			<d>022.7</d>
+		</samples>
+	</station>
+	<station id='ITT' AQS='800020001' name='Instituto Tecnologico de Tijuana' ltime='20140129T12'>
+		<samples var='O3' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='NOx' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='NO' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='NO2' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='CO' units='ppm'>
+			<d>01.19</d>
+		</samples>
+		<samples var='WSP' units='mph'>
+			<d>007.2</d>
+		</samples>
+		<samples var='WDR' units='°A'>
+			<d>278.8</d>
+		</samples>
+		<samples var='TMP' units='°C'>
+			<d>022.8</d>
+		</samples>
+	</station>
+	<station id='ROS' AQS='800020004' name='Rosarito' ltime='20140129T12'>
+		<samples var='O3' units='ppb'>
+			<d>028.6</d>
+		</samples>
+		<samples var='NOx' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='NO' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='NO2' units='ppb'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='CO' units='ppm'>
+			<d flags='D&lt;'>00.00</d>
+		</samples>
+		<samples var='BAM' units='µg/m³'>
+			<d flags='E'>-99.9</d>
+		</samples>
+		<samples var='WSP' units='mph'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+		<samples var='WDR' units='°A'>
+			<d flags='D&lt;'>090.0</d>
+		</samples>
+		<samples var='TMP' units='°C'>
+			<d flags='D&lt;'>000.0</d>
+		</samples>
+	</station>
+	<station id='COB' AQS='800020014' name='COBACH' ltime='20140129T12'>
+		<samples var='O3' units='ppb'>
+			<d>32.432</d>
+		</samples>
+		<samples var='NOx' units='ppb'>
+			<d flags='D'>26.921</d>
+		</samples>
+		<samples var='NO' units='ppb'>
+			<d flags='D'>9.066</d>
+		</samples>
+		<samples var='NO2' units='ppb'>
+			<d flags='D'>16.962</d>
+		</samples>
+		<samples var='CO' units='ppm'>
+			<d>1.586</d>
+		</samples>
+		<samples var='PM2' units='µg/m³'>
+			<d>35.012</d>
+		</samples>
+		<samples var='WSP' units='mph'>
+			<d>2.525</d>
+		</samples>
+		<samples var='WDR' units='°A'>
+			<d>148.58</d>
+		</samples>
+		<samples var='TMP' units='°C'>
+			<d>28.992</d>
+		</samples>
+		<samples var='TMPI' units='°C'>
+			<d>22.902</d>
+		</samples>
+	</station>
+</dataset>
