@@ -75,10 +75,9 @@ BudaXMLAgent.prototype.start = function() {
       var record = new Doc( item.$attrs );
       record.save( function( err ) {
         if( err ) {
-          self.emit( 'error' );
+          self.log( 'Storage error', 'error', err );
         }
       });
-      self.emit( 'hit' );
     });
   }, this ) );
   

@@ -48,10 +48,9 @@ function BudaCSVAgent( conf ) {
     var record = new Doc( item );
     record.save( function( err ) {
       if( err ) {
-        self.emit( 'error' );
+        self.log( 'Storage error', 'error', err );
       }
     });
-    self.emit( 'hit' );
   });
 }
 util.inherits( BudaCSVAgent, BudaAgent );

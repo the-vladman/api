@@ -36,16 +36,16 @@ function removeDups( coords ) {
   // Store first and last points
   var first = coords.shift();
   var last = coords.pop();
-
+  
   // Remove duplicate from remaining elements
   coords = _.uniq( coords, function( point ) {
     return point[0] + ':' + point[1];
   });
-
+  
   // Attach first and last point back in place and assign new coords
   coords.unshift( first );
   coords.push( last );
-
+  
   return coords;
 }
 
@@ -109,13 +109,11 @@ function BudaGeoJSONAgent( conf ) {
         // Store record
         record.save( function( err ) {
           if( err ) {
-            self.emit( 'error' );
+            self.log( 'Storage error', 'error', err );
           }
         });
-        
-        self.emit( 'hit' );
       } else {
-        self.emit( 'error' );
+        self.log( 'Invalid GeoJSON feature', 'error', obj );
       }
     });
   });
