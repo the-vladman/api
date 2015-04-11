@@ -29,7 +29,6 @@ function BudaAgent( conf ) {
   // Listen for interruptions
   process.stdin.resume();
   process.on( 'SIGINT', _.bind( function() {
-    this.log( 'Closing agent' );
     if( this.incoming ) {
       this.incoming.close();
     }
@@ -64,15 +63,25 @@ BudaAgent.prototype.start = function() {
 };
 
 // Cleanup procedure
-// Empty by default, should be implementad based on the custom
-// agent specific requirements
+// Just logging message by default, could be implemented based on
+// the custom agent specific requirements
 BudaAgent.prototype.cleanup = function() {
+  this.log( 'Closing agent' );
   return;
 };
 
 // Log information
-BudaAgent.prototype.log = function( msg ) {
-  process.stdout.write( process.pid + ': ' + msg );
+BudaAgent.prototype.log = function( desc, level, details ) {
+  var msg = {
+    desc: desc,
+    level: level || 'info'
+  };
+  
+  if( details ) {
+    msg.details = details;
+  }
+  
+  process.stdout.write( JSON.stringify( msg ) );
 };
 
 module.exports = BudaAgent;
