@@ -103,7 +103,7 @@ consultas de toda la información procesada y almancenada en las distintas zonas
 
 Bucket CSV-UNIX-mongo sample:
 
-```
+```json
 {
   "version": "0.1",
   "metadata": {
@@ -142,7 +142,7 @@ Bucket CSV-UNIX-mongo sample:
 
 Bucket GeoJSON-TCP-mongo sample:
 
-```
+```json
 {
   "version": "0.1",
   "metadata": {
