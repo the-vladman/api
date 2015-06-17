@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/mxabierto/buda.png?label=ready&title=Ready)](https://waffle.io/mxabierto/buda)
 #BUDA
 -----
 
