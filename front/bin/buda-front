@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+// Buda Front ( bin )
+// ====================
+// CLI program to run a buda-front instance
+
+// Set process name
+'use strict';
+process.title = 'buda-front';
+
+// Dependencies
+var _         = require( 'underscore' );
+var minimist  = require( 'minimist' );
+var BudaFront = require( '../server' );
+
+// Determine runtime configuration: defaults | ENV | CLI
+var config = _.clone( BudaFront.DEFAULTS );
+_.each( config, function( val, key ) {
+  if( process.env[ 'BUDA_FRONT_' + key.toUpperCase() ] ) {
+    config[ key ] = process.env[ 'BUDA_FRONT_' + key.toUpperCase() ];
+  }
+});
+config = minimist( process.argv.slice( 2 ), { 'default': config });
+delete config._;
+
+// Create and start front instance
+var front = new BudaFront( config );
+front.start();
