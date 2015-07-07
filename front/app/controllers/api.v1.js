@@ -309,7 +309,9 @@ module.exports = function( options ) {
           return next( err );
         }
         
-        res.json( docs );
+        res.json({
+          results: docs
+        });
       });
     },
     
