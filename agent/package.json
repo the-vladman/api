@@ -5,8 +5,8 @@
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
   "dependencies": {
-    "minimist": "^1.1.1",
-    "mongoose": "3.8.16",
-    "underscore": "^1.8.2"
+    "minimist": "=1.1.1",
+    "mongoose": "=4.0.6",
+    "underscore": "=1.8.3"
   }
 }

@@ -8,7 +8,7 @@
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
   "dependencies": {
-    "JSONStream": "^0.10.0",
-    "geojson-validation": "^0.1.5"
+    "JSONStream": "=0.10.0",
+    "geojson-validation": "=0.1.5"
   }
 }
