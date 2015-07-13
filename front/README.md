@@ -65,7 +65,7 @@ En el caso de operaciones de cosumo que devuelven multiples elementos la respues
   "results": [...],
   "pagination": {
     "page": 1,
-    "per_page": 20,
+    "pageSize": 20,
     "total": 133
   }
 }

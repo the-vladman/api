@@ -303,14 +303,31 @@ module.exports = function( options ) {
       DataObjectSchema.set( 'collection', collection );
       var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
       
+      // Pagination variables
+      var queryString = req.query;
+      var page = queryString.page || 1;
+      var pageSize = queryString.pageSize || 100;
+      delete queryString.page;
+      delete queryString.pageSize;
+      
+      // Get query object and set pagination records
+      var query = DataObject.find( queryString );
+      query
+        .skip( ( page - 1 ) * pageSize )
+        .limit( pageSize );
+      
       // Run query
-      DataObject.find( req.query, function( err, docs ) {
+      query.exec( function( err, docs ) {
         if( err ) {
           return next( err );
         }
         
         res.json({
-          results: docs
+          results: docs,
+          pagination: {
+            page: page,
+            pageSize: pageSize
+          }
         });
       });
     },

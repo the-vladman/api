@@ -3,7 +3,9 @@
 # Build:
 #   docker build -t mxabierto/buda-front .
 # Usage:
-#   docker run -dP mxabierto/buda-front
+#   docker run \
+#   --name buda-front \
+#   -dP mxabierto/buda-front
 
 FROM mxabierto/nodejs
 
@@ -15,14 +17,11 @@ ADD . /root/buda-front
 
 # Extra dependencies are required by node-gyp to build
 # mongoose and ws =/
+# but after modules compile are no longer required
 RUN \
-  apk-install \
-    g++ \
-    make \
-    python
-
-# Install package modules
-RUN npm install
+  apk-install g++ make python && \
+  npm install && \
+  apk del g++ make python
 
 # Expose default connection port
 EXPOSE 8000

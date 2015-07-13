@@ -8,6 +8,7 @@
 
 // Load required modules
 var _        = require( 'underscore' );
+var colors   = require( 'colors' );
 var fs       = require( 'fs' );
 var path     = require( 'path' );
 var bunyan   = require( 'bunyan' );
@@ -49,8 +50,23 @@ BudaFront.DEFAULTS = {
   port: 8000
 };
 
+// Show usage information
+BudaFront.prototype.printHelp = function() {
+  console.log( colors.green.bold( 'Buda Front ver. ' + info.version ) );
+  console.log( colors.white.bold( 'Available configuration options are:' ) );
+  _.each( BudaFront.DEFAULTS, function( val, key ) {
+    console.log( colors.gray( '\t' + key + '\t' + val ) );
+  });
+};
+
 // Kickstart for the daemon process
 BudaFront.prototype.start = function() {
+  // Looking for help ?
+  if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
+    this.printHelp();
+    process.exit();
+  }
+  
   // Local logger and server accesors
   var logger = this.logger;
   var server = this.server;
@@ -104,7 +120,7 @@ BudaFront.prototype.start = function() {
   // Start listening for requests
   logger.info( 'Listening for requests on port: %s', this.config.port );
   server.listen( this.config.port );
-}
+};
 
 // Exports constructor method
 module.exports = BudaFront;
