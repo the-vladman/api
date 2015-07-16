@@ -53,7 +53,10 @@ BudaAgent.prototype.start = function() {
   
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
-    socket.pipe( this.parser );
+    // Prevent parser from exiting ond 'end' events
+    socket.pipe( this.parser, { 
+      end: false
+    });
   }, this ) );
   
   // Start listening for data
