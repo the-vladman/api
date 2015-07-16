@@ -20,8 +20,6 @@
   "storage": {
     "type": "mongodb",
     "options": {
-        "host": "localhost:27017",
-        "db": "prueba",
         "collection": "callesVeracruz"
     }
   },
@@ -29,8 +27,11 @@
     "type": "stdout"
   },
   "hotspot": {
-    "type": "tcp",
-    "location": 37001
+    "type": "tcp"
   },
-  "extras": {}
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-geojson"
+    }
+  }
 }

@@ -21,8 +21,6 @@
   "storage": {
     "type": "mongodb",
     "options": {
-        "host": "localhost:27017",
-        "db": "prueba",
         "collection": "calidadAire"
     }
   },
@@ -30,8 +28,11 @@
     "type": "stdout"
   },
   "hotspot": {
-    "type": "tcp",
-    "location": 37002
+    "type": "tcp"
   },
-  "extras": {}
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-xml"
+    }
+  }
 }

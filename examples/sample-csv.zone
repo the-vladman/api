@@ -18,8 +18,6 @@
   "storage": {
     "type": "mongodb",
     "options": {
-      "host": "localhost:27017",
-      "db": "prueba",
       "collection": "codigosPostales",
       "index": "d_codigo"
     }
@@ -28,7 +26,11 @@
     "type": "stdout"
   },
   "hotspot": {
-    "type": "unix"
+    "type": "tcp"
   },
-  "extras": {}
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-csv"
+    }
+  }
 }
