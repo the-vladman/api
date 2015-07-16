@@ -28,5 +28,8 @@ RUN \
   # Cleanup
   apk del g++ make python
 
+# Expose default connection port
+EXPOSE 8200
+
 # Default to running the start command
 ENTRYPOINT ["json/bin/buda-agent-json"]

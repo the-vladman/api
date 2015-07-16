@@ -26,7 +26,15 @@ function BudaJSONAgent( conf ) {
   var Doc = mongoose.model( 'Doc', StorageSchema );
   
   // Connect to DB
-  var storage = this.config.storage.host + '/' + this.config.storage.db;
+  // If we're running inside a container some ENV variables should be
+  // set, otherwise assume is a local run and fallback to localhost storage
+  var storage = '';
+  if( process.env.STORAGE_PORT ) {
+    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
+  } else {
+    storage += 'localhost:27017';
+  }
+  storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
   
   // Configure data parser
@@ -40,15 +48,18 @@ function BudaJSONAgent( conf ) {
     self.log( 'Processing done!' );
   });
   
-  // Process each record
+  // Process records
+  var bag = [];
   this.parser.on( 'data', function( item ) {
-    // Create record
-    var record = new Doc( item );
-    record.save( function( err ) {
-      if( err ) {
-        self.log( 'Storage error', 'error', err );
-      }
-    });
+    bag.push( item );
+    if( bag.length == 25 ) {
+      Doc.collection.insert( bag, function( err ) {
+        if( err ) {
+          self.log( 'Storage error', 'error', err );
+        }
+      });
+      bag = [];
+    }
   });
 }
 util.inherits( BudaJSONAgent, BudaAgent );
