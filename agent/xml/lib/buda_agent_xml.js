@@ -27,7 +27,15 @@ function BudaXMLAgent( conf ) {
   StorageSchema.set( 'collection', this.config.storage.collection );
   
   // Connect to DB
-  var storage = this.config.storage.host + '/' + this.config.storage.db;
+  // If we're running inside a container some ENV variables should be
+  // set, otherwise assume is a local run and fallback to localhost storage
+  var storage = '';
+  if( process.env.STORAGE_PORT ) {
+    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
+  } else {
+    storage += 'localhost:27017';
+  }
+  storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
 }
 util.inherits( BudaXMLAgent, BudaAgent );
@@ -69,15 +77,18 @@ BudaXMLAgent.prototype.start = function() {
       self.log( 'Processing done!' );
     });
     
-    // Process each record
+    // Process records
+    var bag = [];
     self.parser.on( 'tag:' + self.config.data.pointer, function( item ) {
-      // Store record
-      var record = new Doc( item.$attrs );
-      record.save( function( err ) {
-        if( err ) {
-          self.log( 'Storage error', 'error', err );
-        }
-      });
+      bag.push( item.$attrs );
+      if( bag.length == 25 ) {
+        Doc.collection.insert( bag, function( err ) {
+          if( err ) {
+            self.log( 'Storage error', 'error', err );
+          }
+        });
+        bag = [];
+      }
     });
   }, this ) );
   
