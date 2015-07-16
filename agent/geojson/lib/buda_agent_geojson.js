@@ -67,7 +67,15 @@ function BudaGeoJSONAgent( conf ) {
   var Doc = mongoose.model( 'Doc', StorageSchema );
   
   // Connect to DB
-  var storage = this.config.storage.host + '/' + this.config.storage.db;
+  // If we're running inside a container some ENV variables should be
+  // set, otherwise assume is a local run and fallback to localhost storage
+  var storage = '';
+  if( process.env.STORAGE_PORT ) {
+    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
+  } else {
+    storage += 'localhost:27017';
+  }
+  storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
   
   // Configure data parser
@@ -81,7 +89,8 @@ function BudaGeoJSONAgent( conf ) {
     self.log( 'Processing done!' );
   });
   
-  // Process each record
+  // Process records
+  var bag = [];
   this.parser.on( 'data', function( obj ) {
     var coords = obj.geometry.coordinates;
     
@@ -100,18 +109,22 @@ function BudaGeoJSONAgent( conf ) {
     // Final feature validation, only valid features will be stored
     GJV.isFeature( obj, function( valid ) {
       if( valid ) {
-        // Create record
-        var record = new Doc({ geojson: obj.geometry });
+        var item = {
+          geojson: obj.geometry,
+          data: {}
+        };
         if( obj.properties ) {
-          record.data.fromOrigin = obj.properties;
+          item.data.fromOrigin = obj.properties;
         }
-        
-        // Store record
-        record.save( function( err ) {
-          if( err ) {
-            self.log( 'Storage error', 'error', err );
-          }
-        });
+        bag.push( item );
+        if( bag.length == 10 ) {
+          Doc.collection.insert( bag, function( err ) {
+            if( err ) {
+              self.log( 'Storage error', 'error', err );
+            }
+          });
+          bag = [];
+        }
       } else {
         self.log( 'Invalid GeoJSON feature', 'error', obj );
       }
