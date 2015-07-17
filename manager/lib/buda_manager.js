@@ -21,6 +21,8 @@ var fs       = require( 'fs' );
 var Hapi     = require( 'hapi' );
 var crypto   = require( 'crypto' );
 var spawn    = require( 'child_process' ).spawn;
+var exec     = require( 'child_process' ).exec;
+var execSync = require( 'child_process' ).execSync;
 var info     = require( '../package' );
 var colors   = require( 'colors/safe' );
 var bunyan   = require( 'bunyan' );
@@ -69,14 +71,20 @@ function BudaManager( config ) {
 }
 
 // Default config values
+// - db - MongoDB database used for data storage
 // - The 'home' directory must be readable and writable by the user
 //   starting the daemon.
 // - Only 'root' can bind to ports lower than 1024 but running this
-//   process as a privileged user is not advaised ( or required )
+//   process as a privileged user is not advised ( nor required )
+// - File to store existing zones information on the FS
+// - Wether to launch agents as child processes or docker containers
 BudaManager.DEFAULTS = {
-  home: '/home/buda/',
-  port: 8000,
-  list: 'zones.conf'
+  db: 'buda',
+  home: '/root',
+  port: 8100,
+  list: 'zones.conf',
+  docker: false,
+  ports: '28300-28400'
 };
 
 // Apply verifications to the home/working directory
@@ -103,7 +111,7 @@ BudaManager.prototype._verifyHome = function() {
 BudaManager.prototype._startInterface = function() {
   // Config connection socket
   this.restapi.connection({
-    host: 'localhost', 
+    host: '0.0.0.0', 
     port: this.config.port
   });
   
@@ -214,8 +222,49 @@ BudaManager.prototype._startInterface = function() {
 
 // Starts a new zone agent
 BudaManager.prototype._startAgent = function( zone ) {
-  // Setup
-  var bin  = 'buda-agent-' + zone.data.type;
+  // Set manager DB as part of the agent configuration
+  zone.storage.options.db = this.config.db;
+  
+  // Start agent as container if running in 'docker' mode
+  if( this.config.docker ) {
+    // Set default port to the one exposed on the docker image; it will
+    // be dynamically mapped on launch
+    if( zone.hotspot.type == 'tcp' ) {
+      zone.hotspot.location = 8200;
+    }
+    
+    // Setup
+    var conf     = {};
+    conf.id      = zone.id;
+    conf.data    = zone.data.options;
+    conf.storage = zone.storage.options;
+    conf.hotspot = zone.hotspot;
+    
+    // Create agent
+    var cmd = 'docker run -dP --link buda-storage:storage ';
+    cmd += zone.extras.docker.image + ' ';
+    cmd += "--conf '" + JSON.stringify( conf ) + "'";
+    var agent = execSync( cmd ).toString().substr( 0, 12 );
+    this.logger.info( 'Starting container agent: %s', agent );
+    this.logger.debug({
+      configuration: conf,
+      cmd: cmd
+    }, 'Starting container agent: %s', agent );
+    
+    this.agents.push( agent );
+    zone.agent = agent;
+    return;
+  }
+  
+  // Randomly find a port in the provided range
+  if( zone.hotspot.type == 'tcp' ) {
+    var portsRange = this.config.ports.split( '-' );
+    var seed = Math.random() * (portsRange[1] - portsRange[0]) + portsRange[0];
+    zone.hotspot.location = Math.floor( seed );
+  }
+  
+  // Sub-process setup
+  var cmd  = 'buda-agent-' + zone.data.type;
   var conf = {};
   conf.id      = zone.id;
   conf.data    = zone.data.options;
@@ -223,11 +272,12 @@ BudaManager.prototype._startAgent = function( zone ) {
   conf.hotspot = zone.hotspot;
   
   // Create agent
-  var agent = spawn( bin, ['--conf', JSON.stringify( conf ) ] );
+  var agent = spawn( cmd, ['--conf', JSON.stringify( conf ) ] );
   this.logger.info( 'Starting agent: %s', agent.pid );
   this.logger.debug({
-    configuration: conf
-  }, 'Starting agent: %s with configuration', agent.pid );
+    configuration: conf,
+    cmd: cmd
+  }, 'Starting agent: %s', agent.pid );
   
   // Create child logger for each individual agent
   agent.logger = this.logger.child({
@@ -257,7 +307,19 @@ BudaManager.prototype._startAgent = function( zone ) {
   
   // Add agent and attach process PID to the zone
   this.agents.push( agent );
-  zone.agentPID = agent.pid;
+  zone.agent = agent.pid;
+};
+
+// Stops a given zone agent
+BudaManager.prototype._stopAgent = function( zone ) {
+  if( this.config.docker ) {
+    this.logger.debug( 'Stopping container agent: %s', zone.agent );
+    execSync( 'docker rm -f ' + zone.agent );
+  } else {
+    this.logger.debug( 'Stopping subprocess agent: %s', zone.agent );
+    process.kill( zone.agent, 'SIGINT' );
+  }
+  this.zones.splice( _.indexOf( this.zones, zone ), 1 );
 };
 
 // Retrive a list of all zones in play
@@ -287,8 +349,7 @@ BudaManager.prototype._updateZone = function( id, newData ) {
   }
   
   // Stop zone agent
-  process.kill( zone.agentPID, 'SIGINT' );
-  this.zones.splice( _.indexOf( this.zones, zone ), 1 );
+  this._stopAgent( zone );
   
   // Create zone with newData
   return this._registerZone( newData );
@@ -304,29 +365,33 @@ BudaManager.prototype._deleteZone = function( id ) {
   }
   
   // Stop zone agent
-  process.kill( zone.agentPID, 'SIGINT' );
+  this._stopAgent( zone );
   
   // Remove
   this.logger.info( 'Remove zone: %s', zone.id );
   this.logger.debug({
     zone: zone
   }, 'Remove zone: %s', zone.id );
-  this.zones.splice( _.indexOf( this.zones, zone ), 1 );
   
   return zone;
 };
 
 // Register a new zone
 BudaManager.prototype._registerZone = function( zone ) {
+  // Validate required data
+  if( ! zone ) {
+    this.logger.warn( 'Missing parameters' );
+    return { error: true, desc: 'MISSING_PARAMETERS' };
+  }
+  
   // Calculate ID
   zone.id = getID( zone );
   
-  // Spawn agent based on zone.data.type
+  // Start agent based on zone.data.type
   this._startAgent( zone );
   
   // Add zone to the list
   this.zones.push( zone );
-  
   this.logger.info( 'Zone created: %s', zone.id );
   this.logger.debug({
     zone: zone
@@ -336,18 +401,18 @@ BudaManager.prototype._registerZone = function( zone ) {
 
 // Gracefully shutdown
 BudaManager.prototype._cleanUp = function() {
-  // Stop running agents
-  this.logger.info( 'Stopping running agents' );
-  _.each( this.agents, function( agent ) {
-    process.kill( agent.pid, 'SIGINT' );
-  });
-  
   // Exit main process;
-  // Give 350ms to each agent to gracefully close too
-  setTimeout( _.bind( function(){
+  // Give 500ms to each agent to gracefully close too
+  setTimeout( _.bind( function() {
     this.logger.info( 'Exiting Manager' );
     process.exit();
-  }, this ), this.agents.length * 350 );
+  }, this ), this.agents.length * 500 );
+  
+  // Stop running agents
+  this.logger.info( 'Stopping running agents' );
+  _.each( this.zones, _.bind( function( zone ) {
+    this._stopAgent( zone );
+  }, this ) );
 };
 
 // Show usage information
