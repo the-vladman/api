@@ -312,22 +312,29 @@ module.exports = function( options ) {
       
       // Get query object and set pagination records
       var query = DataObject.find( queryString );
-      query
-        .skip( ( page - 1 ) * pageSize )
-        .limit( pageSize );
-      
-      // Run query
-      query.exec( function( err, docs ) {
+      DataObject.find( queryString ).count( function( err, total ) {
         if( err ) {
           return next( err );
         }
         
-        res.json({
-          results: docs,
-          pagination: {
-            page: page,
-            pageSize: pageSize
+        query
+          .skip( ( page - 1 ) * pageSize )
+          .limit( pageSize );
+        
+        // Run query
+        query.exec( function( err, docs ) {
+          if( err ) {
+            return next( err );
           }
+          
+          res.json({
+            results: docs,
+            pagination: {
+              page: page,
+              pageSize: pageSize,
+              total: total
+            }
+          });
         });
       });
     },
