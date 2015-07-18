@@ -46,7 +46,7 @@ function BudaFront( config ) {
 // - Only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advaised ( or required )
 BudaFront.DEFAULTS = {
-  db: 'localhost:27017/buda',
+  db: 'buda',
   port: 8000
 };
 
@@ -78,8 +78,15 @@ BudaFront.prototype.start = function() {
   }, 'Starting with configuration' );
   
   // Connect to DB
-  logger.info( 'Establishing database connection: %s', this.config.db );
-  mongoose.connect( this.config.db );
+  var storage = '';
+  if( process.env.STORAGE_PORT ) {
+    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
+  } else {
+    storage += 'localhost:27017';
+  }
+  storage += '/' + this.config.db;
+  logger.info( 'Establishing database connection: %s', storage );
+  mongoose.connect( 'mongodb://' + storage );
   
   // Load application models
   logger.info( 'Loading application models' );

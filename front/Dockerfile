@@ -4,6 +4,7 @@
 #   docker build -t mxabierto/buda-front .
 # Usage:
 #   docker run \
+#   --link buda-storage:storage \
 #   --name buda-front \
 #   -dP mxabierto/buda-front
 
