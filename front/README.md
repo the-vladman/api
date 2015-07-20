@@ -119,6 +119,9 @@ $or=[cond|cond]
 $and=[cond|cond]
 $nor=[cond|cond]
 $not=[cond|cond]
+
+* Distinct
+key=[distinct]
 ```
 
 ### POST
