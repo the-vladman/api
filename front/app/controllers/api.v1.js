@@ -27,7 +27,7 @@ var DataObjectSchema = new mongoose.Schema({}, {
 module.exports = function( options ) {
   // Local logger accesor
   var logger = options.logger;
-  
+
   // Public controller interface
   return {
     // Register a new API consumer
@@ -36,7 +36,7 @@ module.exports = function( options ) {
     //   - accessKey: pub->base64
     registerConsumer: function( req, res, next ) {
       logger.info( 'Registering a new API cosumer' );
-      
+
       // Consumer creation process
       async.waterfall([
         // Generate the API key for the new consumer
@@ -49,7 +49,7 @@ module.exports = function( options ) {
             priv: helpers.base64Enc( rsa.exportKey() )
           });
           logger.debug( { apiKey: apiKey },'API key created' );
-          
+
           apiKey.save( function( err ) {
             if( err ) {
               err = new Error( 'ERROR_CREATING_API_KEY' );
@@ -64,7 +64,7 @@ module.exports = function( options ) {
           if( ! req.body.accessKey ) {
             return cb( null, apiKey, false );
           }
-          
+
           // Validate and store provided key
           logger.debug( 'Registering default access key' );
           var userKey = new NodeRSA();
@@ -76,13 +76,13 @@ module.exports = function( options ) {
               err.status = 400;
               throw err;
             }
-            
+
             // Store key
             var accessKey = new RSAKey({
               fingerprint: helpers.rsaFingerprint( userKey.exportKey( 'public' ), true ),
               pub: helpers.base64Enc( userKey.exportKey( 'public' ) )
             });
-            
+
             logger.debug( { accessKey: accessKey }, 'Adding default access key' );
             accessKey.save( function( err ) {
               if( err ) {
@@ -104,12 +104,12 @@ module.exports = function( options ) {
             apiKey: apiKey._id,
             details: req.body.details || {}
           });
-          
+
           // Add the default accesskey if present
           if( accessKey ) {
             consumer.accessKeys.push( accessKey );
           }
-          
+
           consumer.save( function( err ) {
             if( err ) {
               return cb( err );
@@ -135,23 +135,23 @@ module.exports = function( options ) {
         res.json( result );
       });
     },
-    
+
     // Retrieve's a specific consumer details
     getConsumerInfo: function( req, res, next ) {
       logger.info( 'Getting consumer details' );
-      
+
       // Run query with the provided ID
       Consumer.findById( req.params.id, function( err, consumer ) {
         if( err ) {
           return next( err );
         }
-        
+
         if( ! consumer ) {
           var err = new Error( 'INVALID_CONSUMER_ID' );
           err.status = 400;
           return next( err );
         }
-        
+
         // Populate apikey information
         consumer
           .populate( 'accessKeys', 'fingerprint -_id' )
@@ -164,33 +164,33 @@ module.exports = function( options ) {
           });
       });
     },
-    
+
     // Adds a new access key for a given consumer
     // Required parameters:
     //   - accessKey: pub->base64
     addConsumerKey: function( req, res, next ) {
       logger.info( 'Add consumer key' );
-      
+
       // Validate required parameters are present
       if( ! req.body.accessKey ) {
         var err = new Error( 'MISSING_PARAMETERS' );
         err.status = 400;
         return next( err );
       }
-      
+
       // Retrieve consumer
       Consumer.findById( req.params.id, function( err, consumer ) {
         if( err ) {
           return next( err );
         }
-        
+
         // Invalid ID check
         if( ! consumer ) {
           var err = new Error( 'INVALID_CONSUMER_ID' );
           err.status = 400;
           return next( err );
         }
-        
+
         // Validate provided key
         var newKey = new NodeRSA();
         try {
@@ -204,37 +204,37 @@ module.exports = function( options ) {
         } catch( e ) {
           return next( e );
         }
-        
+
         // Store key
         var accessKey = new RSAKey({
           fingerprint: helpers.rsaFingerprint( newKey.exportKey( 'public' ), true ),
           pub: helpers.base64Enc( newKey.exportKey( 'public' ) )
         });
-        
+
         logger.debug( { accessKey: accessKey }, 'Adding new access key' );
         accessKey.save( function( err ) {
           if( err ) {
             return next( e );
           }
-          
+
           // Update consumer record
           consumer.accessKeys.push( accessKey._id );
           consumer.save( function( err ) {
             if( err ) {
               return next( e );
             }
-            
+
             res.json( accessKey );
             return;
           });
         });
       });
     },
-    
+
     // Delete a given access key for a specific consumer
     delConsumerKey: function( req, res, next ) {
       logger.info( 'Delete consumer key' );
-      
+
       async.waterfall([
         // Validate the provided consumer ID
         function validateConsumer( cb ) {
@@ -242,13 +242,13 @@ module.exports = function( options ) {
             if( err ) {
               return cb( err );
             }
-            
+
             if( ! consumer ) {
               err = new Error( 'INVALID_CONSUMER_ID' );
               err.status = 400;
               return cb( err );
             }
-        
+
             cb( null, consumer );
           });
         },
@@ -259,20 +259,20 @@ module.exports = function( options ) {
             err.status = 400;
             return cb( err );
           }
-          
+
           RSAKey.remove({ _id: req.params.keyId }, function( err, key ) {
             if( err ) {
               err = new Error( 'ERROR_REMOVING_KEY' );
               return cb( err );
             }
-            
+
             consumer.accessKeys.splice( consumer.accessKeys.indexOf( req.params.keyId ), 1 );
             consumer.save( function( err ) {
               if( err ) {
                 err = new Error( 'ERROR_UPDATING_CONSUMER_RECORD' );
                 return cb( err );
               }
-              
+
               cb( null, consumer );
             });
           });
@@ -286,11 +286,11 @@ module.exports = function( options ) {
         res.json( result );
       });
     },
-    
+
     // Run a general data query
     runQuery: function( req, res, next ) {
       logger.info( 'Run query' );
-      
+
       // Validate collection
       var collection = req.params.dataCollection;
       if( collection.substr( 0, 4 ) == 'sys.' ) {
@@ -298,35 +298,34 @@ module.exports = function( options ) {
         err.status = 400;
         return next( err );
       }
-      
+
       // Adjust model to run-time requirements
-      DataObjectSchema.set( 'collection', collection );
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
-      
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+
       // Pagination variables
       var queryString = req.query;
       var page = queryString.page || 1;
       var pageSize = queryString.pageSize || 100;
       delete queryString.page;
       delete queryString.pageSize;
-      
+
       // Get query object and set pagination records
       var query = DataObject.find( queryString );
       DataObject.find( queryString ).count( function( err, total ) {
         if( err ) {
           return next( err );
         }
-        
+
         query
           .skip( ( page - 1 ) * pageSize )
           .limit( pageSize );
-        
+
         // Run query
         query.exec( function( err, docs ) {
           if( err ) {
             return next( err );
           }
-          
+
           res.json({
             results: docs,
             pagination: {
@@ -338,11 +337,11 @@ module.exports = function( options ) {
         });
       });
     },
-    
+
     // Retrieve a specific data document
     getDocument: function( req, res, next ) {
       logger.info( 'Retrieve document' );
-      
+
       // Validate collection
       var collection = req.params.dataCollection;
       if( collection.substr( 0, 4 ) == 'sys.' ) {
@@ -350,31 +349,30 @@ module.exports = function( options ) {
         err.status = 400;
         return next( err );
       }
-      
+
       // Adjust model to run-time requirements
-      DataObjectSchema.set( 'collection', collection );
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
-      
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+
       // Try to retrieve the requested document
       DataObject.findById( req.params.docId, function( err, doc ) {
         if( err ) {
           return next( err );
         }
-        
+
         if( ! doc ) {
           err = new Error( 'INVALID_DOCUMENT_ID' );
           err.status = 400;
           return next( err );
         }
-        
+
         res.json( doc );
       });
     },
-    
+
     // Register a new data record/document
     registerDocument: function( req, res, next ) {
       logger.info( 'Register document' );
-      
+
       // Validate collection
       var collection = req.params.dataCollection;
       if( collection.substr( 0, 4 ) == 'sys.' ) {
@@ -382,33 +380,32 @@ module.exports = function( options ) {
         err.status = 400;
         return next( err );
       }
-      
+
       // Validate there's data to work with
       if( _.isEmpty( req.body ) ) {
         var err = new Error( 'NO_DATA_PROVIDED' );
         err.status = 400;
         return next( err );
       }
-      
+
       // Adjust model to run-time requirements
-      DataObjectSchema.set( 'collection', collection );
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
-      
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+
       // Create and store document
       var doc = new DataObject( req.body );
       doc.save( function( err ) {
         if( err ) {
           return next( err );
         }
-        
+
         res.json( doc );
       });
     },
-    
+
     // Update a specific data document
     updateDocument: function( req, res, next ) {
       logger.info( 'Update document' );
-      
+
       // Validate collection
       var collection = req.params.dataCollection;
       if( collection.substr( 0, 4 ) == 'sys.' ) {
@@ -416,38 +413,37 @@ module.exports = function( options ) {
         err.status = 400;
         return next( err );
       }
-      
+
       // Validate there's data to work with
       if( _.isEmpty( req.body ) ) {
         var err = new Error( 'NO_DATA_PROVIDED' );
         err.status = 400;
         return next( err );
       }
-      
+
       // Adjust model to run-time requirements
-      DataObjectSchema.set( 'collection', collection );
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
-      
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+
       // Try to retrieve and update the requested document
       DataObject.findByIdAndUpdate( req.params.docId, req.body, { new: true }, function( err, doc ) {
         if( err ) {
           return next( err );
         }
-        
+
         if( ! doc ) {
           err = new Error( 'INVALID_DOCUMENT_ID' );
           err.status = 400;
           return next( err );
         }
-        
+
         res.json( doc );
       });
     },
-    
+
     // Delete a specific data document
     delDocument: function( req, res, next ) {
       logger.info( 'Delete document' );
-      
+
       // Validate collection
       var collection = req.params.dataCollection;
       if( collection.substr( 0, 4 ) == 'sys.' ) {
@@ -455,23 +451,22 @@ module.exports = function( options ) {
         err.status = 400;
         return next( err );
       }
-      
+
       // Adjust model to run-time requirements
-      DataObjectSchema.set( 'collection', collection );
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema );
-      
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+
       // Try to select and remove the requested document
       DataObject.findByIdAndRemove( req.params.docId, function( err, doc ) {
         if( err ) {
           return next( err );
         }
-        
+
         if( ! doc ) {
           err = new Error( 'INVALID_DOCUMENT_ID' );
           err.status = 400;
           return next( err );
         }
-        
+
         res.json( doc );
       });
     }
