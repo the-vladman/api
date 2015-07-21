@@ -25,20 +25,27 @@ var cookieParser = require( 'cookie-parser' );
 function BudaFront( config ) {
   // Runtime configuration holder
   this.config = _.defaults( config, BudaFront.DEFAULTS );
-  
+
   // App logging interface
   this.logger = bunyan.createLogger({
     name: 'buda-front',
     stream: process.stdout,
     level: 'debug'
   });
-  
+
   // HTTP server instance
   this.server = express();
   this.server.disable( 'x-powered-by' );
   this.server.use( compression() );
   this.server.use( cookieParser() );
   this.server.use( bodyParser.json() );
+
+  // Allow CORS access
+  this.server.use( function( req, res, next ) {
+    res.header( 'Access-Control-Allow-Origin', '*' );
+    res.header( 'Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept' );
+    next();
+  });
 }
 
 // Default config values
@@ -66,17 +73,17 @@ BudaFront.prototype.start = function() {
     this.printHelp();
     process.exit();
   }
-  
+
   // Local logger and server accesors
   var logger = this.logger;
   var server = this.server;
-  
+
   // Log config
   logger.info( 'Buda Front ver. ' + info.version );
   logger.debug({
     config: this.config
   }, 'Starting with configuration' );
-  
+
   // Connect to DB
   var storage = '';
   if( process.env.STORAGE_PORT ) {
@@ -87,7 +94,7 @@ BudaFront.prototype.start = function() {
   storage += '/' + this.config.db;
   logger.info( 'Establishing database connection: %s', storage );
   mongoose.connect( 'mongodb://' + storage );
-  
+
   // Load application models
   logger.info( 'Loading application models' );
   fs.readdirSync( __dirname + '/app/models/' ).forEach( function( model ) {
@@ -95,7 +102,7 @@ BudaFront.prototype.start = function() {
     logger.debug( 'Loading model: %s', model );
     require( './app/models/' + model );
   });
-  
+
   // Load application routers
   logger.info( 'Loading application routers' );
   fs.readdirSync( __dirname + '/app/routers/' ).forEach( function( router ) {
@@ -105,7 +112,7 @@ BudaFront.prototype.start = function() {
       logger: logger
     }));
   });
-  
+
   // Custom 404 error
   server.use( function( req, res, next ) {
     logger.debug( 'Invalid path' );
@@ -114,7 +121,7 @@ BudaFront.prototype.start = function() {
       error: 'INVALID_PATH'
     });
   });
-  
+
   // Global error handler
   server.use( function( err, req, res, next ) {
     logger.fatal( err, 'Unexpected error' );
@@ -123,7 +130,7 @@ BudaFront.prototype.start = function() {
       error: err.message
     });
   });
-  
+
   // Start listening for requests
   logger.info( 'Listening for requests on port: %s', this.config.port );
   server.listen( this.config.port );
