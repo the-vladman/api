@@ -1,3 +1,4 @@
+/* eslint no-process-exit:0 */
 // Buda Agent
 // ==========
 // Base template of a buda agent; should be extended on
@@ -5,7 +6,7 @@
 //
 // function CustomAgent( conf ) {
 //   BudaAgent.call( this, conf );
-//   
+//
 //   this.parser = .....
 // }
 // util.inherits( CustomAgent, BudaAgent );
@@ -14,18 +15,18 @@
 'use strict';
 
 // Load required modules
-var _        = require( 'underscore' );
-var net      = require( 'net' );
-var util     = require( 'util' );
-var events   = require( 'events' );
+var _ = require( 'underscore' );
+var net = require( 'net' );
+var util = require( 'util' );
+var events = require( 'events' );
 
 // Constructor
 function BudaAgent( conf ) {
-  this.parser   = null;
+  this.parser = null;
   this.endpoint = null;
   this.incoming = null;
-  this.config   = conf;
-  
+  this.config = conf;
+
   // Listen for interruptions
   process.stdin.resume();
   process.on( 'SIGINT', _.bind( function() {
@@ -50,15 +51,15 @@ BudaAgent.prototype.start = function() {
   } else {
     this.endpoint = this.config.hotspot.location;
   }
-  
+
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
     // Prevent parser from exiting ond 'end' events
-    socket.pipe( this.parser, { 
+    socket.pipe( this.parser, {
       end: false
     });
   }, this ) );
-  
+
   // Start listening for data
   this.incoming.listen( this.endpoint, _.bind( function() {
     this.log( 'Agent ready' );
@@ -76,14 +77,14 @@ BudaAgent.prototype.cleanup = function() {
 // Log information
 BudaAgent.prototype.log = function( desc, level, details ) {
   var msg = {
-    desc: desc,
+    desc:  desc,
     level: level || 'info'
   };
-  
+
   if( details ) {
     msg.details = details;
   }
-  
+
   process.stdout.write( JSON.stringify( msg ) );
 };
 

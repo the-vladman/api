@@ -1,3 +1,4 @@
+/* eslint no-sync:0, no-process-exit:0 */
 // Buda Front
 // ==========
 // Provides a RESTful API to access the data managed by a
@@ -7,18 +8,18 @@
 'use strict';
 
 // Load required modules
-var _        = require( 'underscore' );
-var colors   = require( 'colors' );
-var fs       = require( 'fs' );
-var path     = require( 'path' );
-var bunyan   = require( 'bunyan' );
+var _ = require( 'underscore' );
+var colors = require( 'colors' );
+var fs = require( 'fs' );
+var path = require( 'path' );
+var bunyan = require( 'bunyan' );
 var mongoose = require( 'mongoose' );
-var info     = require( './package' );
+var info = require( './package' );
 
 // Express and middleware
-var express      = require( 'express' );
-var compression  = require( 'compression' );
-var bodyParser   = require( 'body-parser' );
+var express = require( 'express' );
+var compression = require( 'compression' );
+var bodyParser = require( 'body-parser' );
 var cookieParser = require( 'cookie-parser' );
 
 // Constructor method
@@ -28,9 +29,9 @@ function BudaFront( config ) {
 
   // App logging interface
   this.logger = bunyan.createLogger({
-    name: 'buda-front',
+    name:   'buda-front',
     stream: process.stdout,
-    level: 'debug'
+    level:  'debug'
   });
 
   // HTTP server instance
@@ -42,8 +43,10 @@ function BudaFront( config ) {
 
   // Allow CORS access
   this.server.use( function( req, res, next ) {
+    var headers = 'Origin, X-Requested-With, Content-Type, Accept';
+
     res.header( 'Access-Control-Allow-Origin', '*' );
-    res.header( 'Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept' );
+    res.header( 'Access-Control-Allow-Headers', headers );
     next();
   });
 }
@@ -53,7 +56,7 @@ function BudaFront( config ) {
 // - Only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advaised ( or required )
 BudaFront.DEFAULTS = {
-  db: 'buda',
+  db:   'buda',
   port: 8000
 };
 
@@ -68,15 +71,15 @@ BudaFront.prototype.printHelp = function() {
 
 // Kickstart for the daemon process
 BudaFront.prototype.start = function() {
+  var logger = this.logger;
+  var server = this.server;
+  var storage = '';
+
   // Looking for help ?
   if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
     this.printHelp();
     process.exit();
   }
-
-  // Local logger and server accesors
-  var logger = this.logger;
-  var server = this.server;
 
   // Log config
   logger.info( 'Buda Front ver. ' + info.version );
@@ -85,7 +88,6 @@ BudaFront.prototype.start = function() {
   }, 'Starting with configuration' );
 
   // Connect to DB
-  var storage = '';
   if( process.env.STORAGE_PORT ) {
     storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
   } else {
@@ -97,20 +99,20 @@ BudaFront.prototype.start = function() {
 
   // Load application models
   logger.info( 'Loading application models' );
-  fs.readdirSync( __dirname + '/app/models/' ).forEach( function( model ) {
-    model = path.basename( model, '.js' );
+  fs.readdirSync( path.join( __dirname, 'app/models/' ) ).forEach( function( model ) {
     logger.debug( 'Loading model: %s', model );
-    require( './app/models/' + model );
+    require( './app/models/' + path.basename( model, '.js' ) );
   });
 
   // Load application routers
   logger.info( 'Loading application routers' );
-  fs.readdirSync( __dirname + '/app/routers/' ).forEach( function( router ) {
-    router = path.basename( router, '.js' );
-    logger.debug( 'Loading router: %s', router );
-    server.use( '/' + router, require( './app/routers/' + router )({
+  fs.readdirSync( path.join( __dirname, 'app/routers/' ) ).forEach( function( router ) {
+    var route = path.basename( router, '.js' );
+
+    logger.debug( 'Loading router: %s', route );
+    server.use( '/' + route, require( './app/routers/' + route )({
       logger: logger
-    }));
+    }) );
   });
 
   // Custom 404 error
@@ -120,6 +122,7 @@ BudaFront.prototype.start = function() {
     res.json({
       error: 'INVALID_PATH'
     });
+    next();
   });
 
   // Global error handler
@@ -129,6 +132,7 @@ BudaFront.prototype.start = function() {
     res.json({
       error: err.message
     });
+    next();
   });
 
   // Start listening for requests

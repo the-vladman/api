@@ -1,23 +1,18 @@
 // Dependencies
 var mongoose = require( 'mongoose' );
-var Schema   = mongoose.Schema;
-var ObjectId = mongoose.Schema.Types.ObjectId;
-var Mixed    = mongoose.Schema.Types.Mixed;
+var Schema = mongoose.Schema;
 
 // API Consumer data model
 var RSAKeySchema = new Schema({
   fingerprint: { type: String, unique: true, required: true },
-  pub: { type: String },
-  priv: { type: String }
-},{
-  strict: true,
-  read: 'nearest',
+  pub:         { type: String },
+  priv:        { type: String }
+}, {
+  strict:     true,
+  read:       'nearest',
   versionKey: '_v',
   collection: 'sys.keys',
-  safe: {
-    j: 1,
-    w: 'majority'
-  }
+  safe:       { j: 1, w: 'majority' }
 });
 
 // Model export

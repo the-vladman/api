@@ -2,15 +2,22 @@
 'use strict';
 
 // Base class
-var BudaAgent  = require( '../../buda_agent' );
+var BudaAgent = require( '../../buda_agent' );
 
 // Custom requirements
-var _          = require( 'underscore' );
-var util       = require( 'util' );
-var mongoose   = require( 'mongoose' );
+var _ = require( 'underscore' );
+var util = require( 'util' );
+var mongoose = require( 'mongoose' );
 var JSONStream = require( 'JSONStream' );
-var GJV        = require( 'geojson-validation' );
-var info       = require( '../package' );
+var GJV = require( 'geojson-validation' );
+var info = require( '../package' );
+
+// Storage schema basic definiton
+/* eslint no-reserved-keys:0 */
+var StorageSchema = new mongoose.Schema({
+  data:    { type: mongoose.Schema.Types.Mixed, default: {} },
+  geojson: { type: mongoose.Schema.Types.Mixed, index: '2dsphere' }
+});
 
 // Private utility method
 // Coords should be stored as long,lat; no altitude element included
@@ -19,12 +26,12 @@ function removeAltitude( coords ) {
     if( _.isArray( item ) ) {
       // Recursive call for nested arrays at any depth
       removeAltitude( item );
-    } else {
-      // If the coords data has three elements,
-      // remove the last one ( altitude )
-      if( coords.length === 3 ) {
-        coords.pop();
-      }
+    }
+
+    // If the coords data has three elements,
+    // remove the last one ( altitude )
+    if( coords.length === 3 ) {
+      coords.pop();
     }
   });
 }
@@ -36,40 +43,39 @@ function removeDups( coords ) {
   // Store first and last points
   var first = coords.shift();
   var last = coords.pop();
-  
-  // Remove duplicate from remaining elements
-  coords = _.uniq( coords, function( point ) {
-    return point[0] + ':' + point[1];
-  });
-  
-  // Attach first and last point back in place and assign new coords
-  coords.unshift( first );
-  coords.push( last );
-  
-  return coords;
-}
+  var result;
 
-// Storage schema basic definiton
-var StorageSchema = mongoose.Schema({
-  data    : { type: mongoose.Schema.Types.Mixed, default:{} },
-  geojson : { type: mongoose.Schema.Types.Mixed, index: '2dsphere' }
-});
+  // Remove duplicate from remaining elements
+  result = _.uniq( coords, function( point ) {
+    return point[ 0 ] + ':' + point[ 1 ];
+  });
+
+  // Attach first and last point back in place and assign new coords
+  result.unshift( first );
+  result.push( last );
+
+  return result;
+}
 
 // Constructor method
 function BudaGeoJSONAgent( conf ) {
+  var Doc;
+  var self = this;
+  var storage = '';
+  var bag = [];
+
   BudaAgent.call( this, conf );
-  
+
   // Log agent information
   this.log( 'Buda GeoJSON Agent ver. ' + info.version );
-  
+
   // Configure schema and model for storage
   StorageSchema.set( 'collection', this.config.storage.collection );
-  var Doc = mongoose.model( 'Doc', StorageSchema );
-  
+  Doc = mongoose.model( 'Doc', StorageSchema );
+
   // Connect to DB
   // If we're running inside a container some ENV variables should be
   // set, otherwise assume is a local run and fallback to localhost storage
-  var storage = '';
   if( process.env.STORAGE_PORT ) {
     storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
   } else {
@@ -77,47 +83,46 @@ function BudaGeoJSONAgent( conf ) {
   }
   storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
-  
+
   // Configure data parser
   this.parser = JSONStream.parse( this.config.data.pointer );
-  
-  // Self pointer
-  var self = this;
-  
+
   // Rewind on complete
   this.parser.on( 'end', function() {
     self.log( 'Processing done!' );
   });
-  
+
   // Process records
-  var bag = [];
   this.parser.on( 'data', function( obj ) {
+    var i;
     var coords = obj.geometry.coordinates;
-    
+
     // Remove altitude if required
     if( self.config.data.removeAltitude ) {
       removeAltitude( coords );
     }
-    
+
     // Remove duplicate points
     if( self.config.data.removeDuplicatePoints ) {
-      for( var i = 0; i < obj.geometry.coordinates[0].length; i++ ) {
-        obj.geometry.coordinates[0] = removeDups( obj.geometry.coordinates[0] );
+      for( i = 0; i < obj.geometry.coordinates[ 0 ].length; i ++ ) {
+        obj.geometry.coordinates[ 0 ] = removeDups( obj.geometry.coordinates[ 0 ] );
       }
     }
-    
+
     // Final feature validation, only valid features will be stored
     GJV.isFeature( obj, function( valid ) {
+      var item;
+
       if( valid ) {
-        var item = {
+        item = {
           geojson: obj.geometry,
-          data: {}
+          data:    {}
         };
         if( obj.properties ) {
           item.data.fromOrigin = obj.properties;
         }
         bag.push( item );
-        if( bag.length == 10 ) {
+        if( bag.length === 20 ) {
           Doc.collection.insert( bag, function( err ) {
             if( err ) {
               self.log( 'Storage error', 'error', err );

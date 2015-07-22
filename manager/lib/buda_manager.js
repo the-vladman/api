@@ -1,3 +1,4 @@
+/* eslint no-sync:0, no-process-exit:0 */
 // Buda Manager
 // ============
 // Handle a graph of subprocesses for data manipulation on
@@ -16,21 +17,21 @@
 'use strict';
 
 // Load required modules
-var _        = require( 'underscore' );
-var fs       = require( 'fs' );
-var Hapi     = require( 'hapi' );
-var crypto   = require( 'crypto' );
-var spawn    = require( 'child_process' ).spawn;
-var exec     = require( 'child_process' ).exec;
+var _ = require( 'underscore' );
+var fs = require( 'fs' );
+var Hapi = require( 'hapi' );
+var crypto = require( 'crypto' );
+var spawn = require( 'child_process' ).spawn;
 var execSync = require( 'child_process' ).execSync;
-var info     = require( '../package' );
-var colors   = require( 'colors/safe' );
-var bunyan   = require( 'bunyan' );
+var info = require( '../package' );
+var colors = require( 'colors/safe' );
+var bunyan = require( 'bunyan' );
 
 // Utility method to calculate a zone ID
 function getID( zone ) {
   var shasum = crypto.createHash( 'sha1' );
   var digest = '|';
+
   digest += zone.version + '|';
   digest += zone.metadata.name + '|';
   digest += zone.metadata.description + '|';
@@ -56,15 +57,15 @@ function BudaManager( config ) {
 
   // App logging interface
   this.logger = bunyan.createLogger({
-    name: 'buda-manager',
+    name:   'buda-manager',
     stream: process.stdout,
-    level: 'debug'
+    level:  'debug'
   });
 
   // API interface
   this.restapi = new Hapi.Server({
     minimal: true,
-    load: {
+    load:    {
       sampleInterval: 5000
     }
   });
@@ -79,12 +80,12 @@ function BudaManager( config ) {
 // - File to store existing zones information on the FS
 // - Wether to launch agents as child processes or docker containers
 BudaManager.DEFAULTS = {
-  db: 'buda',
-  home: '/root',
-  port: 8100,
-  list: 'zones.conf',
+  db:     'buda',
+  home:   '/root',
+  port:   8100,
+  list:   'zones.conf',
   docker: false,
-  ports: '2810-2890'
+  ports:  '2810-2890'
 };
 
 // Apply verifications to the home/working directory
@@ -99,7 +100,6 @@ BudaManager.prototype._verifyHome = function() {
   try {
     // Disable this check, the singe | character is required
     // for the bitmask according to the API
-    // jshint -W016
     fs.accessSync( this.config.home, fs.R_OK | fs.W_OK );
   } catch( err ) {
     this.logger.fatal( err, 'Invalid permissions' );
@@ -109,6 +109,8 @@ BudaManager.prototype._verifyHome = function() {
 
 // Setup REST interface
 BudaManager.prototype._startInterface = function() {
+  var self = this;
+
   // Config connection socket
   this.restapi.connection({
     host: '0.0.0.0',
@@ -116,105 +118,107 @@ BudaManager.prototype._startInterface = function() {
   });
 
   // Attach REST routes to commands
-  var self = this;
-  this.restapi.route([
+  this.restapi.route( [
     {
-      method: 'GET',
-      path:'/ping',
+      method:  'GET',
+      path:    '/ping',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Healt check' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( 'pong' );
       }
     },
     {
-      method: 'GET',
-      path:'/',
+      method:  'GET',
+      path:    '/',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Retrieve zone list' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._getZoneList() );
       }
     },
     {
-      method: 'GET',
-      path:'/{id}',
+      method:  'GET',
+      path:    '/{id}',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Retrieve zone details' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._getZoneDetails( request.params.id ) );
       }
     },
     {
-      method: 'PUT',
-      path:'/{id}',
+      method:  'PUT',
+      path:    '/{id}',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Update zone' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._updateZone( request.params.id, request.payload.zone ) );
       }
     },
     {
-      method: 'PATCH',
-      path:'/{id}',
+      method:  'PATCH',
+      path:    '/{id}',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Update zone' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._updateZone( request.params.id, request.payload.zone ) );
       }
     },
     {
-      method: 'DELETE',
-      path:'/{id}',
+      method:  'DELETE',
+      path:    '/{id}',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Delete zone' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._deleteZone( request.params.id ) );
       }
     },
     {
-      method: 'POST',
-      path:'/',
+      method:  'POST',
+      path:    '/',
       handler: function( request, reply ) {
         self.logger.info( 'Request: Create zone' );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
         reply( self._registerZone( request.payload.zone ) );
       }
     },
     {
-      method: '*',
-      path:'/{p*}',
+      method:  '*',
+      path:    '/{p*}',
       handler: function( request, reply ) {
         self.logger.warn( 'Bad request: %s %s', request.method, request.path );
         self.logger.debug({
-          params: request.params,
+          params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        reply( { error: true, desc: 'INVALID_REQUEST' } );
+        reply({
+          error: true,
+          desc:  'INVALID_REQUEST'
+        });
       }
     }
-  ]);
+  ] );
 
   // Open connections
   this.restapi.start();
@@ -222,6 +226,13 @@ BudaManager.prototype._startInterface = function() {
 
 // Starts a new zone agent
 BudaManager.prototype._startAgent = function( zone ) {
+  var cmd;
+  var seed;
+  var agent;
+  var output;
+  var portsRange;
+  var conf = {};
+
   // Set manager DB as part of the agent configuration
   zone.storage.options.db = this.config.db;
 
@@ -229,26 +240,25 @@ BudaManager.prototype._startAgent = function( zone ) {
   if( this.config.docker ) {
     // Set default port to the one exposed on the docker image; it will
     // be dynamically mapped on launch
-    if( zone.hotspot.type == 'tcp' ) {
+    if( zone.hotspot.type === 'tcp' ) {
       zone.hotspot.location = 8200;
     }
 
     // Setup
-    var conf     = {};
-    conf.id      = zone.id;
-    conf.data    = zone.data.options;
+    conf.id = zone.id;
+    conf.data = zone.data.options;
     conf.storage = zone.storage.options;
     conf.hotspot = zone.hotspot;
 
     // Create agent
-    var cmd = 'docker run -dP --link buda-storage:storage ';
+    cmd = 'docker run -dP --link buda-storage:storage ';
     cmd += zone.extras.docker.image + ' ';
     cmd += "--conf '" + JSON.stringify( conf ) + "'";
-    var agent = execSync( cmd ).toString().substr( 0, 12 );
+    agent = execSync( cmd ).toString().substr( 0, 12 );
     this.logger.info( 'Starting container agent: %s', agent );
     this.logger.debug({
       configuration: conf,
-      cmd: cmd
+      cmd:           cmd
     }, 'Starting container agent: %s', agent );
 
     this.agents.push( agent );
@@ -257,42 +267,43 @@ BudaManager.prototype._startAgent = function( zone ) {
   }
 
   // Randomly find a port in the provided range
-  if( zone.hotspot.type == 'tcp' ) {
-    var portsRange = this.config.ports.split( '-' );
-    var seed = Math.random() * (portsRange[1] - portsRange[0]) + portsRange[0];
+  if( zone.hotspot.type === 'tcp' ) {
+    portsRange = this.config.ports.split( '-' );
+    portsRange[ 0 ] = Number( portsRange[ 0 ] );
+    portsRange[ 1 ] = Number( portsRange[ 1 ] );
+    seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
     zone.hotspot.location = Math.floor( seed );
   }
 
   // Sub-process setup
-  var cmd  = 'buda-agent-' + zone.data.type;
-  var conf = {};
-  conf.id      = zone.id;
-  conf.data    = zone.data.options;
+  cmd = 'buda-agent-' + zone.data.type;
+  conf.id = zone.id;
+  conf.data = zone.data.options;
   conf.storage = zone.storage.options;
   conf.hotspot = zone.hotspot;
 
   // Create agent
-  var agent = spawn( cmd, ['--conf', JSON.stringify( conf ) ] );
+  agent = spawn( cmd, ['--conf', JSON.stringify( conf ) ] );
   this.logger.info( 'Starting agent: %s', agent.pid );
   this.logger.debug({
     configuration: conf,
-    cmd: cmd
+    cmd:           cmd
   }, 'Starting agent: %s', agent.pid );
 
   // Create child logger for each individual agent
   agent.logger = this.logger.child({
     agent: agent.pid,
-    zone: zone.id
+    zone:  zone.id
   });
 
   // Catch information on the agent output
   agent.stdout.on( 'data', function( msg ) {
     try {
-      msg = JSON.parse( msg );
-      if( msg.details ) {
-        agent.logger[msg.level]( msg.details );
+      output = JSON.parse( msg );
+      if( output.details ) {
+        agent.logger[ output.level ]( output.details );
       } else {
-        agent.logger[msg.level]( msg.desc );
+        agent.logger[ output.level ]( output.desc );
       }
     } catch( e ) {
       agent.logger.error( 'Error decoging: %s', msg );
@@ -331,6 +342,7 @@ BudaManager.prototype._getZoneList = function() {
 BudaManager.prototype._getZoneDetails = function( id ) {
   // Retrieve element from this.zones based on it's id
   var zone = _.findWhere( this.zones, { id: id });
+
   if( ! zone ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
@@ -343,6 +355,7 @@ BudaManager.prototype._getZoneDetails = function( id ) {
 BudaManager.prototype._updateZone = function( id, newData ) {
   // Retrieve element from this.zones based on it's id
   var zone = _.findWhere( this.zones, { id: id });
+
   if( ! zone ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
@@ -359,6 +372,7 @@ BudaManager.prototype._updateZone = function( id, newData ) {
 BudaManager.prototype._deleteZone = function( id ) {
   // Retrieve element from this.zones based on it's id
   var zone = _.findWhere( this.zones, { id: id });
+
   if( ! zone ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
@@ -460,7 +474,7 @@ BudaManager.prototype.start = function() {
   process.stdin.resume();
   process.on( 'SIGINT', _.bind( function() {
     this._cleanUp();
-  }, this ));
+  }, this ) );
 };
 
 module.exports = BudaManager;

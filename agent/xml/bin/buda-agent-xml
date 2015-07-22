@@ -6,18 +6,20 @@
 // Requirements
 var minimist = require( 'minimist' );
 var BudaXMLAgent = require( '../lib/buda_agent_xml' );
+var params = minimist( process.argv.slice( 2 ) );
+var config;
+var agent;
 
 // Get runtime configuration
-var params = minimist( process.argv.slice( 2 ) );
 delete params._;
 if( params.conf === undefined ) {
   throw new Error( 'MISSING_CONFIGURATION' );
 }
-var config = JSON.parse( params.conf );
+config = JSON.parse( params.conf );
 
 // Set process title
 process.title = 'buda-agent-xml: ' + config.id;
 
 // Start agent
-var agent = new BudaXMLAgent( config );
+agent = new BudaXMLAgent( config );
 agent.start();
