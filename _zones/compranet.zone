@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "CompraNet",
+    "description": "Datos relevantes de los contratos derivados de los procedimientos de contratación reportados en CompraNet",
+    "author": "Eduardo Clark",
+    "organization": "SFP",
+    "website": "https://compranet.funcionpublica.gob.mx",
+    "email": "contacto@datos.gob.mx",
+    "phone": ""
+  },
+  "data": {
+    "type": "csv",
+    "options": {
+      "separator": ","
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "collection": "compranet",
+      "index": "CODIGO_CONTRATO"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "tcp"
+  },
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-csv"
+    }
+  }
+}

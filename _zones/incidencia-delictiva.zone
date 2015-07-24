@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "Incidencia Delictiva",
+    "description": "Registros de Incidencia Delictiva Nacional",
+    "author": "Eduardo Clark",
+    "organization": "Red México Abierto",
+    "website": "datos.gob.mx",
+    "email": "contacto@datos.gob.mx",
+    "phone": ""
+  },
+  "data": {
+    "type": "csv",
+    "options": {
+      "separator": ","
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "collection": "incidenciaDelictiva",
+      "index": "cve_inegi"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "tcp"
+  },
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-csv"
+    }
+  }
+}

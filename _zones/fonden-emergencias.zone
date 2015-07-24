@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "Fonden Emergencias",
+    "description": "Registros de Emergencias Naturales del Fondo Nacional de Desastres Naturales",
+    "author": "Eduardo Clark",
+    "organization": "Fondo Nacional de Desastres Naturales",
+    "website": "datos.gob.mx",
+    "email": "contacto@datos.gob.mx",
+    "phone": ""
+  },
+  "data": {
+    "type": "csv",
+    "options": {
+      "separator": ","
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "collection": "fonden.emergencias",
+      "index": "cve"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "tcp"
+  },
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-csv"
+    }
+  }
+}
