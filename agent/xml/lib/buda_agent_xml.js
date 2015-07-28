@@ -46,6 +46,30 @@ BudaXMLAgent.prototype.cleanup = function() {
   mongoose.disconnect();
 };
 
+// Perform cleanup on items before storage
+BudaXMLAgent.prototype.cleanItem = function( item ) {
+  var self = this;
+
+  _.each( item, function( v, k, obj ) {
+    // Remove processing markers
+    if( k.substr( 0, 1 ) === '$' ) {
+      delete obj[ k ];
+    }
+
+    // Properly handle arrays
+    if( k === '0' ) {
+      // self.log( _.values( obj ) );
+    }
+
+    // Iterate recursively on nested objects
+    if( _.isObject( v ) ) {
+      self.cleanItem( v );
+    }
+  });
+
+  return item;
+};
+
 // Custom start method
 // This is required because of the way the flow is initiated
 BudaXMLAgent.prototype.start = function() {
@@ -69,17 +93,28 @@ BudaXMLAgent.prototype.start = function() {
     self.parser = xmlflow( socket, {
       normalize: self.config.data.normalize,
       trim:      self.config.data.trim,
-      lowercase: self.config.data.lowercase
+      lowercase: self.config.data.lowercase,
+      useArrays: xmlflow.ALWAYS
     });
 
     // Rewind on complete
     self.parser.on( 'end', function() {
+      if( bag.length > 0 ) {
+        Doc.collection.insert( bag, function( err ) {
+          if( err ) {
+            self.log( 'Storage error', 'error', err );
+          }
+        });
+        bag = [];
+      }
       self.log( 'Processing done!' );
     });
 
     // Process records
     self.parser.on( 'tag:' + self.config.data.pointer, function( item ) {
-      bag.push( item.$attrs );
+      // Cleanup items
+      self.cleanItem( item );
+      bag.push( item );
       if( bag.length === 50 ) {
         Doc.collection.insert( bag, function( err ) {
           if( err ) {

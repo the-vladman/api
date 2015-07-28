@@ -50,6 +50,14 @@ function BudaCSVAgent( conf ) {
 
   // Rewind on complete
   this.parser.on( 'end', function() {
+    if( bag.length > 0 ) {
+      Doc.collection.insert( bag, function( err ) {
+        if( err ) {
+          self.log( 'Storage error', 'error', err );
+        }
+      });
+      bag = [];
+    }
     self.log( 'Processing done!' );
   });
 
