@@ -1,0 +1,39 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "Calidad del Aire",
+    "description": "Procesa feeds con las capturas de estaciones en indice de calidad del aire",
+    "author": "Eduardo Clark",
+    "organization": "Red México Abierto",
+    "website": "datos.gob.mx",
+    "email": "contacto@datos.gob.mx",
+    "phone": ""
+  },
+  "data": {
+    "type": "xml",
+    "options": {
+      "pointer": "station",
+      "normalize": true,
+      "trim": true,
+      "lowercase": true
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "collection": "calidadAire",
+      "index": "station.id"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "tcp"
+  },
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-xml"
+    }
+  }
+}
