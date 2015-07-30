@@ -32,8 +32,9 @@
     "type": "tcp"
   },
   "extras": {
+    "handler": "airquality",
     "docker": {
-      "image": "mxabierto/buda-agent-xml"
+      "image": "mxabierto/buda-agent-airquality"
     }
   }
 }
