@@ -74,6 +74,14 @@ BudaAgent.prototype.cleanup = function() {
   return;
 };
 
+// Data transform procedure
+// Just logging message by default, could be implemented based on
+// the custom agent specific requirements
+BudaAgent.prototype.transform = function( record ) {
+  this.log( 'Preparing data' );
+  return record;
+};
+
 // Log information
 BudaAgent.prototype.log = function( desc, level, details ) {
   var msg = {
