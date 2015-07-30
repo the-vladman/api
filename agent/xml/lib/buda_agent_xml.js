@@ -48,26 +48,13 @@ BudaXMLAgent.prototype.cleanup = function() {
 
 // Perform cleanup on items before storage
 BudaXMLAgent.prototype.cleanItem = function( item ) {
-  var self = this;
+  var string = JSON.stringify( item )
+                   .replace( /\$attrs/g, '_attrs' )
+                   .replace( /\$name/g, '_name' )
+                   .replace( /\$text/g, '_text' );
 
-  _.each( item, function( v, k, obj ) {
-    // Remove processing markers
-    if( k.substr( 0, 1 ) === '$' ) {
-      delete obj[ k ];
-    }
-
-    // Properly handle arrays
-    if( k === '0' ) {
-      // self.log( _.values( obj ) );
-    }
-
-    // Iterate recursively on nested objects
-    if( _.isObject( v ) ) {
-      self.cleanItem( v );
-    }
-  });
-
-  return item;
+  /* eslint no-param-reassign:0 */
+  return JSON.parse( string );
 };
 
 // Custom start method
@@ -76,6 +63,7 @@ BudaXMLAgent.prototype.start = function() {
   var self = this;
   var Doc;
   var bag = [];
+  var clean;
 
   // Determine agent endpoint to use
   if( this.config.hotspot.type === 'unix' ) {
@@ -113,8 +101,8 @@ BudaXMLAgent.prototype.start = function() {
     // Process records
     self.parser.on( 'tag:' + self.config.data.pointer, function( item ) {
       // Cleanup items
-      self.cleanItem( item );
-      bag.push( item );
+      clean = self.transform( self.cleanItem( item ) );
+      bag.push( clean );
       if( bag.length === 50 ) {
         Doc.collection.insert( bag, function( err ) {
           if( err ) {
@@ -127,9 +115,9 @@ BudaXMLAgent.prototype.start = function() {
   }, this ) );
 
   // Start listening for data
-  this.incoming.listen( this.endpoint, _.bind( function() {
-    this.log( 'Agent ready' );
-  }, this ) );
+  this.incoming.listen( this.endpoint, function() {
+    self.log( 'Agent ready' );
+  });
 };
 
 module.exports = BudaXMLAgent;
