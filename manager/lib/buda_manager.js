@@ -276,7 +276,11 @@ BudaManager.prototype._startAgent = function( zone ) {
   }
 
   // Sub-process setup
-  cmd = 'buda-agent-' + zone.data.type;
+  if( zone.extras.handler ) {
+    cmd = zone.extras.handler;
+  } else {
+    cmd = 'buda-agent-' + zone.data.type;
+  }
   conf.id = zone.id;
   conf.data = zone.data.options;
   conf.storage = zone.storage.options;
