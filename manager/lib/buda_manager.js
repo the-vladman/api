@@ -252,6 +252,7 @@ BudaManager.prototype._startAgent = function( zone ) {
 
     // Create agent
     cmd = 'docker run -dP --link buda-storage:storage ';
+    cmd += '--name ' + zone.storage.options.collection + ' ';
     cmd += zone.extras.docker.image + ' ';
     cmd += "--conf '" + JSON.stringify( conf ) + "'";
     agent = execSync( cmd ).toString().substr( 0, 12 );
