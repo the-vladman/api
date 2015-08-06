@@ -8,13 +8,14 @@
 var _ = require( 'underscore' );
 var minimist = require( 'minimist' );
 var BudaManager = require( '../lib/buda_manager' );
-var config = _.clone( BudaManager.DEFAULTS );
+var config;
 var manager;
 
 // Set process title
 process.title = 'buda-manager';
 
 // Determine runtime configuration: defaults | ENV | CLI
+config = _.clone( BudaManager.DEFAULTS );
 _.each( config, function( val, key ) {
   if( process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ] ) {
     config[ key ] = process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ];

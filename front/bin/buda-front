@@ -8,13 +8,14 @@
 var _ = require( 'underscore' );
 var minimist = require( 'minimist' );
 var BudaFront = require( '../server' );
-var config = _.clone( BudaFront.DEFAULTS );
+var config;
 var front;
 
 // Set process name
 process.title = 'buda-front';
 
 // Determine runtime configuration: defaults | ENV | CLI
+config = _.clone( BudaFront.DEFAULTS );
 _.each( config, function( val, key ) {
   if( process.env[ 'BUDA_FRONT_' + key.toUpperCase() ] ) {
     config[ key ] = process.env[ 'BUDA_FRONT_' + key.toUpperCase() ];
