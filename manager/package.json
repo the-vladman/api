@@ -10,5 +10,8 @@
     "hapi": "^8.4.0",
     "minimist": "^1.1.1",
     "underscore": "^1.8.2"
+  },
+  "bin": {
+    "buda-manager": "./bin/buda-manager"
   }
 }

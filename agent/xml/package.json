@@ -9,5 +9,8 @@
   "license": "MIT",
   "dependencies": {
     "xml-flow": "=0.1.5"
+  },
+  "bin": {
+    "buda-agent-xml": "./bin/buda-agent-xml"
   }
 }

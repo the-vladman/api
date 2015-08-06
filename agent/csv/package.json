@@ -9,5 +9,8 @@
   "license": "MIT",
   "dependencies": {
     "csv-stream": "=0.1.3"
+  },
+  "bin": {
+    "buda-agent-csv": "./bin/buda-agent-csv"
   }
 }

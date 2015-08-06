@@ -9,5 +9,8 @@
   "license": "MIT",
   "dependencies": {
     "JSONStream": "=0.10.0"
+  },
+  "bin": {
+    "buda-agent-json": "./bin/buda-agent-json"
   }
 }

@@ -10,5 +10,8 @@
   "dependencies": {
     "JSONStream": "=0.10.0",
     "geojson-validation": "=0.1.5"
+  },
+  "bin": {
+    "buda-agent-geojson": "./bin/buda-agent-geojson"
   }
 }
