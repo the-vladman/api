@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "name": "ODS",
+    "description": "Indicadores de los Objetivos de Desarrollo Sostenibles - Desagregación Geográfica",
+    "author": "Eduardo Clark",
+    "organization": "CEDN",
+    "website": "http://datos.gob.mx/",
+    "email": "eduardo.clark@presidencia.gob.mx",
+    "phone": "+525550935300"
+  },
+  "data": {
+    "type": "csv",
+    "options": {
+      "separator": ","
+    }
+  },
+  "storage": {
+    "type": "mongodb",
+    "options": {
+      "collection": "ods.desagregacion",
+      "index": "id"
+    }
+  },
+  "errors": {
+    "type": "stdout"
+  },
+  "hotspot": {
+    "type": "tcp"
+  },
+  "extras": {
+    "docker": {
+      "image": "mxabierto/buda-agent-csv"
+    }
+  }
+}
