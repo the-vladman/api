@@ -321,10 +321,6 @@ module.exports = function( options ) {
       delete queryString.page;
       delete queryString.pageSize;
 
-      // Get query object and set pagination records
-      logger.info( 'Run query' );
-      logger.debug({ queryString: queryString }, 'Run query' );
-
       // Process operators in query string
       _.each( queryString, function( v, k ) {
         // Test if the value provided is an operator
@@ -334,11 +330,10 @@ module.exports = function( options ) {
 
           // Loog for supported operator keys
           switch( opSegments[ 1 ] ) {
-            // Regex operator
+            // Regex operator; text is an alias
+            case 'text':
             case 'regex':
-              queryString[ k ] = {
-                $regex: opSegments[ 2 ]
-              };
+              queryString[ k ] = new RegExp( opSegments[ 2 ], 'ig' );
               break;
             // Delete unsupported operators
             default:
@@ -347,6 +342,9 @@ module.exports = function( options ) {
         }
       });
 
+      // Run query
+      logger.info( 'Run query' );
+      logger.debug({ queryString: queryString }, 'Run query with filters' );
       query = DataObject.find( queryString );
       DataObject.find( queryString ).count( function( err, total ) {
         if( err ) {
@@ -384,7 +382,8 @@ module.exports = function( options ) {
       // Validate collection
       logger.info( 'Retrieve document' );
       collection = req.params.dataCollection;
-      if( collection.substr( 0, 4 ) === 'sys.' ) {
+      if( collection.substr( 0, 4 ) === 'sys.' ||
+          collection.substr( 0, 7 ) === 'system.' ) {
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );
@@ -419,7 +418,8 @@ module.exports = function( options ) {
       // Validate collection
       logger.info( 'Register document' );
       collection = req.params.dataCollection;
-      if( collection.substr( 0, 4 ) === 'sys.' ) {
+      if( collection.substr( 0, 4 ) === 'sys.' ||
+          collection.substr( 0, 7 ) === 'system.' ) {
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );
@@ -456,7 +456,8 @@ module.exports = function( options ) {
       // Validate collection
       logger.info( 'Update document' );
       collection = req.params.dataCollection;
-      if( collection.substr( 0, 4 ) === 'sys.' ) {
+      if( collection.substr( 0, 4 ) === 'sys.' ||
+          collection.substr( 0, 7 ) === 'system.' ) {
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );
@@ -499,7 +500,8 @@ module.exports = function( options ) {
       // Validate collection
       logger.info( 'Delete document' );
       collection = req.params.dataCollection;
-      if( collection.substr( 0, 4 ) === 'sys.' ) {
+      if( collection.substr( 0, 4 ) === 'sys.' ||
+          collection.substr( 0, 7 ) === 'system.' ) {
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );
