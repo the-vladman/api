@@ -47,6 +47,9 @@ function BudaFront( config ) {
 
     res.header( 'Access-Control-Allow-Origin', '*' );
     res.header( 'Access-Control-Allow-Headers', headers );
+
+    // Set buda version header
+    res.header( 'X-BUDA-Version', info.version );
     next();
   });
 }
