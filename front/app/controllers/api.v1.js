@@ -293,17 +293,19 @@ module.exports = function( options ) {
 
     // Run a general data query
     runQuery: function( req, res, next ) {
-      var error;
+      var operatorRE = /\[(\w*):(.*)\]/;
       var collection = req.params.dataCollection;
+      var opSegments;
       var DataObject;
       var query;
       var queryString;
       var page;
       var pageSize;
+      var error;
 
       // Validate collection
-      logger.info( 'Run query' );
-      if( collection.substr( 0, 4 ) === 'sys.' ) {
+      if( collection.substr( 0, 4 ) === 'sys.' ||
+          collection.substr( 0, 7 ) === 'system.' ) {
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );
@@ -320,6 +322,31 @@ module.exports = function( options ) {
       delete queryString.pageSize;
 
       // Get query object and set pagination records
+      logger.info( 'Run query' );
+      logger.debug({ queryString: queryString }, 'Run query' );
+
+      // Process operators in query string
+      _.each( queryString, function( v, k ) {
+        // Test if the value provided is an operator
+        if( operatorRE.test( v ) ) {
+          // Get operator key and value
+          opSegments = v.split( operatorRE );
+
+          // Loog for supported operator keys
+          switch( opSegments[ 1 ] ) {
+            // Regex operator
+            case 'regex':
+              queryString[ k ] = {
+                $regex: opSegments[ 2 ]
+              };
+              break;
+            // Delete unsupported operators
+            default:
+              delete queryString[ k ];
+          }
+        }
+      });
+
       query = DataObject.find( queryString );
       DataObject.find( queryString ).count( function( err, total ) {
         if( err ) {
