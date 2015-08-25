@@ -5,6 +5,7 @@
 var _ = require( 'underscore' );
 var async = require( 'async' );
 var helpers = require( '../../helpers' );
+var moment = require( 'moment' );
 var mongoose = require( 'mongoose' );
 var uuid = require( 'node-uuid' );
 var NodeRSA = require( 'node-rsa' );
@@ -299,6 +300,7 @@ module.exports = function( options ) {
       var DataObject;
       var query;
       var queryString;
+      var queryRange;
       var page;
       var pageSize;
       var error;
@@ -322,6 +324,7 @@ module.exports = function( options ) {
       delete queryString.pageSize;
 
       // Process operators in query string
+      /* eslint complexity:0 */
       _.each( queryString, function( v, k ) {
         // Test if the value provided is an operator
         if( operatorRE.test( v ) ) {
@@ -330,6 +333,68 @@ module.exports = function( options ) {
 
           // Loog for supported operator keys
           switch( opSegments[ 1 ] ) {
+            // Greater than
+            case 'gt':
+              // Verify if provided value is a valid date
+              if( moment( opSegments[ 2 ] ).isValid() ) {
+                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+              }
+
+              queryString[ k ] = { $gt: opSegments[ 2 ] };
+              break;
+            // Greater than or equal
+            case 'gte':
+              // Verify if provided value is a valid date
+              if( moment( opSegments[ 2 ] ).isValid() ) {
+                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+              }
+
+              queryString[ k ] = { $gte: opSegments[ 2 ] };
+              break;
+            // Lesser than
+            case 'lt':
+              // Verify if provided value is a valid date
+              if( moment( opSegments[ 2 ] ).isValid() ) {
+                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+              }
+
+              queryString[ k ] = { $lt: opSegments[ 2 ] };
+              break;
+            // Lesser than or equal
+            case 'lte':
+              // Verify if provided value is a valid date
+              if( moment( opSegments[ 2 ] ).isValid() ) {
+                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+              }
+
+              queryString[ k ] = { $lte: opSegments[ 2 ] };
+              break;
+            // In set
+            case 'in':
+              queryString[ k ] = { $in: opSegments[ 2 ].split( ',' ) };
+              break;
+            // Not-in set
+            case 'nin':
+              queryString[ k ] = { $nin: opSegments[ 2 ].split( ',' ) };
+              break;
+            // In range
+            case 'range':
+              // Get range values
+              queryRange = opSegments[ 2 ].split( '|' );
+
+              // Verify if provided values are valid dates
+              if( moment( queryRange[ 0 ] ).isValid() ) {
+                queryRange[ 0 ] = new Date( queryRange[ 0 ] );
+              }
+              if( moment( queryRange[ 1 ] ).isValid() ) {
+                queryRange[ 1 ] = new Date( queryRange[ 1 ] );
+              }
+
+              queryString[ k ] = {
+                $gte: queryRange[ 0 ],
+                $lte: queryRange[ 1 ]
+              };
+              break;
             // Regex operator; text is an alias
             case 'text':
             case 'regex':

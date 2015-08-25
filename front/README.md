@@ -103,7 +103,7 @@ key=[lt:x]
 key=[lte:x]
 key=[in:s,e,t]
 key=[nin:s,e,t]
-key=[range:min-max]
+key=[range:min|max]
 
 * Evaluación
 key=[regex:'/PATTERN/']
@@ -119,9 +119,6 @@ $or=[cond|cond]
 $and=[cond|cond]
 $nor=[cond|cond]
 $not=[cond|cond]
-
-* Distinct
-key=[distinct]
 ```
 
 ### POST
