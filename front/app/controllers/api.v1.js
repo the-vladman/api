@@ -5,7 +5,6 @@
 var _ = require( 'underscore' );
 var async = require( 'async' );
 var helpers = require( '../../helpers' );
-var moment = require( 'moment' );
 var mongoose = require( 'mongoose' );
 var uuid = require( 'node-uuid' );
 var NodeRSA = require( 'node-rsa' );
@@ -295,6 +294,7 @@ module.exports = function( options ) {
     // Run a general data query
     runQuery: function( req, res, next ) {
       var operatorRE = /\[(\w*):(.*)\]/;
+      var simpleDateRE = /^\d{2,4}([./-])\d{2}\1\d{2,4}$/;
       var collection = req.params.dataCollection;
       var opSegments;
       var DataObject;
@@ -336,7 +336,7 @@ module.exports = function( options ) {
             // Greater than
             case 'gt':
               // Verify if provided value is a valid date
-              if( moment( opSegments[ 2 ] ).isValid() ) {
+              if( opSegments[ 2 ].match( simpleDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -345,7 +345,7 @@ module.exports = function( options ) {
             // Greater than or equal
             case 'gte':
               // Verify if provided value is a valid date
-              if( moment( opSegments[ 2 ] ).isValid() ) {
+              if( opSegments[ 2 ].match( simpleDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -354,7 +354,7 @@ module.exports = function( options ) {
             // Lesser than
             case 'lt':
               // Verify if provided value is a valid date
-              if( moment( opSegments[ 2 ] ).isValid() ) {
+              if( opSegments[ 2 ].match( simpleDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -363,7 +363,7 @@ module.exports = function( options ) {
             // Lesser than or equal
             case 'lte':
               // Verify if provided value is a valid date
-              if( moment( opSegments[ 2 ] ).isValid() ) {
+              if( opSegments[ 2 ].match( simpleDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -383,10 +383,10 @@ module.exports = function( options ) {
               queryRange = opSegments[ 2 ].split( '|' );
 
               // Verify if provided values are valid dates
-              if( moment( queryRange[ 0 ] ).isValid() ) {
+              if( queryRange[ 0 ].match( simpleDateRE ) ) {
                 queryRange[ 0 ] = new Date( queryRange[ 0 ] );
               }
-              if( moment( queryRange[ 1 ] ).isValid() ) {
+              if( queryRange[ 1 ].match( simpleDateRE ) ) {
                 queryRange[ 1 ] = new Date( queryRange[ 1 ] );
               }
 
