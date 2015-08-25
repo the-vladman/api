@@ -311,7 +311,7 @@ BudaManager.prototype._startAgent = function( zone ) {
         agent.logger[ output.level ]( output.desc );
       }
     } catch( e ) {
-      agent.logger.error( 'Error decoging: %s', msg );
+      agent.logger.error( 'Error decoding: %s', msg );
     }
   });
 

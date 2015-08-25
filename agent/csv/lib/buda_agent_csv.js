@@ -23,7 +23,7 @@ function BudaCSVAgent( conf ) {
   BudaAgent.call( this, conf );
 
   // Log agent information
-  this.log( 'Buda CSV Agent ver. ' + info.version );
+  self.log( 'Buda CSV Agent ver. ' + info.version );
 
   // Configure schema and model for storage
   StorageSchema.set( 'strict', false );
@@ -51,6 +51,7 @@ function BudaCSVAgent( conf ) {
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
+      self.log( 'Inserting orphan bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
           self.log( 'Storage error', 'error', err );
@@ -64,14 +65,20 @@ function BudaCSVAgent( conf ) {
   // Process records
   this.parser.on( 'data', function( item ) {
     bag.push( item );
-    if( bag.length === 50 ) {
+    if( bag.length === ( self.config.storage.batch || 50 ) ) {
+      self.log( 'Inserting bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', err );
+          self.log( 'Storage error', 'error', item );
         }
       });
       bag = [];
     }
+  });
+
+  // Log errors
+  this.parser.on( 'error', function( err ) {
+    self.log( err );
   });
 }
 util.inherits( BudaCSVAgent, BudaAgent );

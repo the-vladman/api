@@ -18,6 +18,7 @@
   "storage": {
     "type": "mongodb",
     "options": {
+      "batch": 1,
       "collection": "ods.metadata",
       "index": "clave"
     }

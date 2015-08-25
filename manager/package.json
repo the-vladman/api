@@ -5,11 +5,11 @@
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
   "dependencies": {
-    "bunyan": "^1.4.0",
-    "colors": "^1.0.3",
-    "hapi": "^8.4.0",
-    "minimist": "^1.1.1",
-    "underscore": "^1.8.2"
+    "bunyan": "=1.4.0",
+    "colors": "=1.1.2",
+    "hapi": "=8.4.0",
+    "minimist": "=1.2.0",
+    "underscore": "=1.8.3"
   },
   "bin": {
     "buda-manager": "./bin/buda-manager"
