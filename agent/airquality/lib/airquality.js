@@ -2,7 +2,7 @@
 'use strict';
 
 // Base class
-var BudaXMLAgent = require( '../../xml/lib/buda_agent_xml' );
+var BudaCSVAgent = require( '../../csv/lib/buda_agent_csv' );
 var _ = require( 'underscore' );
 var util = require( 'util' );
 var info = require( '../package' );
@@ -35,36 +35,31 @@ var indices = [
 ];
 
 // Constructor method
-// Extends base XML Agent definition
+// Extends base CSV Agent definition
 function AirQualityAgent( conf ) {
   this.log( info.name + ' ' + info.version );
-  BudaXMLAgent.call( this, conf );
+  BudaCSVAgent.call( this, conf );
 }
-util.inherits( AirQualityAgent, BudaXMLAgent );
+util.inherits( AirQualityAgent, BudaCSVAgent );
 
 // Custom transform method to comply with the Air Quality Feed Spec
 AirQualityAgent.prototype.transform = function( record ) {
   var m;
   var doc = new FeedSpec.FeedEntry();
-  var date = record._attrs.ltime;
+  var date = new Date( record.fecha + ' ' + record.hora.split( '.' )[ 0 ] );
 
-  // Format ugly dates
-  date = date.slice( 0, 4 ) + '-' + date.slice( 4 );
-  date = date.slice( 0, 7 ) + '-' + date.slice( 7 );
-  date += ':00:00Z';
-
-  doc.stations[ 0 ].id = record._attrs.id;
-  doc.stations[ 0 ].name = record._attrs.name;
-  _.each( record.samples, function( el ) {
-    if( _.indexOf( pollutants, el._attrs.var ) >= 0 ) {
-      m = new FeedSpec.Measurement();
-      m.pollutant = el._attrs.var;
-      m.time = date;
-      m.unit = el._attrs.units || '';
-      m.value = el.d._text || el.d || '';
-      doc.stations[ 0 ].measurements.push( m );
-    }
-  });
+  doc.stations[ 0 ].id = record.cve;
+  doc.stations[ 0 ].name = record.nom;
+  doc.stations[ 0 ].location.lat = record.lat;
+  doc.stations[ 0 ].location.lon = record.lon;
+  if( _.indexOf( pollutants, record.para ) >= 0 ) {
+    m = new FeedSpec.Measurement();
+    m.time = date;
+    m.pollutant = record.para;
+    m.unit = record.unit || '';
+    m.value = record.indice || '';
+    doc.stations[ 0 ].measurements.push( m );
+  }
 
   return doc;
 };

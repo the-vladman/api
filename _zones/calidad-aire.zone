@@ -10,17 +10,15 @@
     "phone": ""
   },
   "data": {
-    "type": "xml",
+    "type": "csv",
     "options": {
-      "pointer": "station",
-      "normalize": true,
-      "trim": true,
-      "lowercase": true
+      "separator": ","
     }
   },
   "storage": {
     "type": "mongodb",
     "options": {
+      "batch": 1,
       "collection": "calidadAire",
       "index": "station.id"
     }

@@ -64,7 +64,7 @@ function BudaCSVAgent( conf ) {
 
   // Process records
   this.parser.on( 'data', function( item ) {
-    bag.push( item );
+    bag.push( self.transform( item ) );
     if( bag.length === ( self.config.storage.batch || 50 ) ) {
       self.log( 'Inserting bag' );
       Doc.collection.insert( bag, function( err ) {
