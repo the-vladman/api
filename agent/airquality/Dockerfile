@@ -23,7 +23,7 @@ RUN \
   # Install base modules
   npm install && \
   # Install agent-specific modules
-  cd xml && \
+  cd csv && \
   npm install && \
   # Cleanup
   apk del g++ make python
