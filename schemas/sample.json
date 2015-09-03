@@ -1,0 +1,20 @@
+{
+  "version": "0.1",
+  "metadata": {
+    "title": "",
+    "description": "",
+    "keyword": ["sample","zone"],
+    "language": ["es-MX"],
+    "license": "https://raw.githubusercontent.com/mxabierto/buda/master/LICENSE",
+    "organization": "México Abierto",
+    "contactName": "Ben Cessa",
+    "contactEmail": "ben@pixative.com"
+  },
+  "data": {
+    "accessLevel": "public",
+    "hotspot": "tcp",
+    "collection": "sample.data",
+    "index": "id",
+    "format": "csv"
+  }
+}

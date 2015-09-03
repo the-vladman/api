@@ -1,0 +1,162 @@
+{
+  "id": "http://api.datos.gob.mx/v1/schemas/zone.json",
+  "$schema": "http://json-schema.org/schema#",
+  "description": "Schema for the definitions of data zones handled by the BUDA platform",
+  "definitions": {},
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "metadata",
+    "data"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "Version",
+      "description": "Schema version used for the zone declaration",
+      "default": "0.1"
+    },
+    "metadata": {
+      "type": "object",
+      "title": "Metadata",
+      "description": "Dataset metadata describing several aspects of the information stored",
+      "required": [
+        "title",
+        "description",
+        "keyword",
+        "language",
+        "license",
+        "organization",
+        "contactName",
+        "contactEmail"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "title": "Title",
+          "description": "Dataset's title"
+        },
+        "description": {
+          "type": "string",
+          "title": "Description",
+          "description": "Dataset's description"
+        },
+        "keyword": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 15
+          },
+          "title": "Keyword(s)",
+          "description": "Keywords related to the information in the dataset"
+        },
+        "language": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          },
+          "title": "Language(s)",
+          "description": "Language(s) (RFC 5646) in which the data is available",
+          "default": [ "es-MX" ]
+        },
+        "license": {
+          "type": "string",
+          "format": "uri",
+          "title": "License",
+          "description": "URL to the license used to distribute the data"
+        },
+        "organization": {
+          "type": "string",
+          "title": "Organization",
+          "description": "Name of the organization responsible for publishing the data"
+        },
+        "contactName": {
+          "type": "string",
+          "title": "Contact Name",
+          "description": "Name of the person listed as primary contact regarding the data"
+        },
+        "contactEmail": {
+          "type": "string",
+          "format": "email",
+          "title": "Contact Email",
+          "description": "Email listed as primary contact method regarding the data"
+        },
+        "identifier": {
+          "type": "string",
+          "title": "Identifier",
+          "description": "Internally used identifier for the dataset, storage collection will be used by default if no value is provided"
+        },
+        "describedBy": {
+          "type": "string",
+          "title": "Described By",
+          "description": "URL to get additional details about the information in the dataset"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "title": "Internal Zone Details",
+      "description": "Configuration parameters used for storage and processing of the data",
+      "additionalProperties": false,
+      "required": [
+        "accessLevel",
+        "hotspot",
+        "collection",
+        "index",
+        "format"
+      ],
+      "properties": {
+        "accessLevel": {
+          "type": "string",
+          "title": "Access Level",
+          "description": "Specify how to distribute the data",
+          "default": "public",
+          "enum": [ "public", "non-public" ]
+        },
+        "hotspot": {
+          "type": "string",
+          "title": "Hotspot",
+          "description": "Specify the endpoint type used to receive incoming data packets",
+          "default": "tcp",
+          "enum": [ "tcp", "unix" ]
+        },
+        "collection": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 40,
+          "title": "Collection",
+          "description": "Data collection used to store (as documents) all data packets received"
+        },
+        "index": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Index",
+          "description": "Data index(es) used for the data collection"
+        },
+        "format": {
+          "type": "string",
+          "title": "Format",
+          "description": "Expected data format, a valid agent must be installed for the data type"
+        },
+        "options": {
+          "type": "object",
+          "title": "Agent Options",
+          "description": "Additional configuration parameters passed to the agent to handle the zone; check agent documentation for specific details",
+          "default": {}
+        }
+      }
+    },
+    "extras": {
+      "type": "object",
+      "title": "Extras",
+      "description": "Optional non-standard additional details",
+      "default": {}
+    }
+  }
+}
