@@ -33,10 +33,9 @@ i.e. `BUDA_FRONT_ACCESS/API_VERSION/data.collection`
 Algunos puntos importantes a discutir/diseñar en siguientes versiones son:
 
 - Soporte para __multiples catálogos__ en una solo instancia
-- Definición formal de un esquema JSON para la descripción de __zonas__
 - Discutir si es necesario/deseable agregar un endpoint `catalog.xml` para distribuir la
 información del catalogo en un documento XML
-- Explorar la posibilidad de incorporar otros tipos de distribución, i.e;
+- Explorar la posibilidad de incorporar otros mecanismos de distribución, i.e;
 archivos de descarga ( data dump ), streaming ( wss :heart_eyes: ), etc
 
 Ejemplo para la distrubición de la información del catalogo:
