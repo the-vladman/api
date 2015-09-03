@@ -1,5 +1,4 @@
-#BUDA FRONT
------------
+# BUDA FRONT
 
 Implementa el punto de acceso a todos los datos procesados y almacenados por BUDA en las distintas zonas disponibles mediante una interfaz HTTP(S) tipo REST.
 
@@ -13,7 +12,7 @@ Las operaciones básicas se realizan mediante verbos HTTP de la siguiente forma:
 Las rutas son estructuradas utilizando la colección de datos sobre la que se este trabajando de la siguiente forma:
 
 ```
-BUDA_FRONT_ACCESS/data.collection/doc.id
+BUDA_FRONT_ACCESS/API_VERSION/data.collection/doc.id
 ```
 
 Donde:
@@ -25,7 +24,7 @@ Donde:
 Un ejemplo de una ruta con todos sus componentes:
 
 ```
-https://buda.mxabierto.org:9001/carto.veracruz.calles/544ef78ba5b815b79673d885
+https://buda.mxabierto.org:9001/v1/carto.veracruz.calles/544ef78ba5b815b79673d885
 ```
 
 Otras consideraciones importantes:
@@ -37,14 +36,14 @@ Otras consideraciones importantes:
 - Todas las operaciones deberán ser debidamente validadas; para mas información consultar el apartado _'SEGURIDAD'_; la única excepción serán las consultas ( operaciones GET ) a colecciones de datos marcadas como _públicas_
 
 ## Respuestas
-Todas las operaciones de creación/edición de contenido, y las operaciones de consumo que duelven un solo elemento, responden para operaciones exitosas el recurso sobre el cual se realizo la operación.
+Todas las operaciones de creación/edición de contenido responden para operaciones exitosas el recurso sobre el cual se realizo la operación.
 
-```
+```json
 {
   "_id" : "53fa1ebc0f18039f2d8c4634",
   "_v" : 0,
   "email" : "info@mxabierto.org",
-  "name" : "Dirección General de Asuntos Sin Importancia"
+  "name" : "Dirección General de Asuntos Sin Importancia",
   "address" : {
     "street" : "Av. Xalapa",
     "extNum" : "310",
@@ -58,26 +57,26 @@ Todas las operaciones de creación/edición de contenido, y las operaciones de c
 }
 ```
 
-En el caso de operaciones de cosumo que devuelven multiples elementos la respuesta incluye el listado de resultados e información sobre la paginación.
+En el caso de operaciones de consumo la respuesta incluye el listado de resultados e información sobre la paginación.
 
-```
+```json
 {
-  "results": [...],
   "pagination": {
     "page": 1,
     "pageSize": 20,
     "total": 133
-  }
+  },
+  "results": []
 }
 ```
 
 ## Manejo de Errores
 Todas las operaciones que se determinan en alguna condición de error regresan una estructura JSON que describe la condición y __opcionalmente__ algunos detalles adicionales:
 
-```
+```json
 {
   "error": "INVALID_DOCUMENT_ID",
-  "details": {...}
+  "details": {}
 }
 ```
 
@@ -177,7 +176,7 @@ La firma de las peticiones se calcula de la siguiente forma:
 
 Calcular código de referencia:
 
-```
+```sh
 echo -n "json codificado" | openssl sha1 | cut -c1-10
 ```
 
@@ -185,7 +184,7 @@ echo -n "json codificado" | openssl sha1 | cut -c1-10
 
 Generación de una firma utilizando la llave privada:
 
-```
+```sh
 echo -n "2702eff870" | openssl rsautl -sign -inkey priv | base64
 ```
 
@@ -193,7 +192,7 @@ echo -n "2702eff870" | openssl rsautl -sign -inkey priv | base64
 
 Validación de una firma utilizando la llave pública:
 
-```
+```sh
 base64 -D signature | openssl rsautl -verify -pubin -inkey pub
 ```
 
@@ -214,7 +213,7 @@ B2:FD:48:9A:0F:FC:12:9B:72:F4:83:86:BD:C2:09:73
 
 Este valor se puede obtener a partir de la parte privada o pública de una llave:
 
-```
+```sh
 openssl rsa -in priv -noout -modulus | openssl md5 -c | tr "[:lower:]" "[:upper:]"
 openssl rsa -in pub -pubin -noout -modulus | openssl md5 -c | tr "[:lower:]" "[:upper:]"
 ```
