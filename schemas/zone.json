@@ -20,7 +20,7 @@
     "metadata": {
       "type": "object",
       "title": "Metadata",
-      "description": "Dataset metadata describing several aspects of the information stored",
+      "description": "Structured information that describes, explains, locates, or otherwise makes it easier to retrieve, use, or manage the dataset",
       "required": [
         "title",
         "description",
@@ -35,12 +35,12 @@
         "title": {
           "type": "string",
           "title": "Title",
-          "description": "Dataset's title"
+          "description": "Human-readable name of the asset. Should include sufficient detail to facilitate search and discovery"
         },
         "description": {
           "type": "string",
           "title": "Description",
-          "description": "Dataset's description"
+          "description": "Human-readable description (e.g., an abstract) with sufficient detail to enable a user to quickly understand whether the asset is of interest"
         },
         "keyword": {
           "type": "array",
@@ -52,7 +52,7 @@
             "maxLength": 15
           },
           "title": "Keyword(s)",
-          "description": "Keywords related to the information in the dataset"
+          "description": "Tags (or keywords) help users discover your dataset; please include terms that would be used by technical and non-technical users"
         },
         "language": {
           "type": "array",
@@ -69,12 +69,12 @@
           "type": "string",
           "format": "uri",
           "title": "License",
-          "description": "URL to the license used to distribute the data"
+          "description": "The license with which the dataset has been published"
         },
         "organization": {
           "type": "string",
           "title": "Organization",
-          "description": "Name of the organization responsible for publishing the data"
+          "description": "The plaintext name of the entity publishing this dataset"
         },
         "contactName": {
           "type": "string",
@@ -90,18 +90,18 @@
         "identifier": {
           "type": "string",
           "title": "Identifier",
-          "description": "Internally used identifier for the dataset, storage collection will be used by default if no value is provided"
+          "description": "A unique identifier for the dataset, storage collection will be used by default if no value is provided"
         },
         "describedBy": {
           "type": "string",
           "title": "Described By",
-          "description": "URL to get additional details about the information in the dataset"
+          "description": "URL to the data dictionary for the dataset"
         }
       }
     },
     "data": {
       "type": "object",
-      "title": "Internal Zone Details",
+      "title": "Zone Processing Details",
       "description": "Configuration parameters used for storage and processing of the data",
       "additionalProperties": false,
       "required": [

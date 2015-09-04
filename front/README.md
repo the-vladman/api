@@ -24,7 +24,7 @@ Donde:
 Un ejemplo de una ruta con todos sus componentes:
 
 ```
-https://buda.mxabierto.org:9001/v1/carto.veracruz.calles/544ef78ba5b815b79673d885
+https://api.datos.gob.mx/v1/carto.veracruz.calles/544ef78ba5b815b79673d885
 ```
 
 Otras consideraciones importantes:
