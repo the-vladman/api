@@ -1,6 +1,6 @@
 {
   "name": "buda-manager",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Manager process for the 'BUDA' platform",
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
@@ -8,8 +8,10 @@
     "bunyan": "=1.4.0",
     "colors": "=1.1.2",
     "hapi": "=8.4.0",
+    "jsen": "=0.6.0",
     "minimist": "=1.2.0",
-    "underscore": "=1.8.3"
+    "underscore": "=1.8.3",
+    "yamljs": "=0.2.3"
   },
   "bin": {
     "buda-manager": "./bin/buda-manager"

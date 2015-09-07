@@ -4,6 +4,7 @@
 #   docker build -t mxabierto/buda-manager .
 # Usage:
 #   docker run \
+#   --link buda-storage:storage \
 #   --name buda-manager \
 #   -v /var/run/docker.sock:/var/run/docker.sock \
 #   -dP mxabierto/buda-manager

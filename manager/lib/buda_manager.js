@@ -19,6 +19,7 @@
 // Load required modules
 var _ = require( 'underscore' );
 var fs = require( 'fs' );
+var path = require( 'path' );
 var Hapi = require( 'hapi' );
 var crypto = require( 'crypto' );
 var spawn = require( 'child_process' ).spawn;
@@ -26,6 +27,8 @@ var execSync = require( 'child_process' ).execSync;
 var info = require( '../package' );
 var colors = require( 'colors/safe' );
 var bunyan = require( 'bunyan' );
+var jsen = require( 'jsen' );
+var YAML = require( 'yamljs' );
 
 // Utility method to calculate a zone ID
 function getID( zone ) {
@@ -33,19 +36,19 @@ function getID( zone ) {
   var digest = '|';
 
   digest += zone.version + '|';
-  digest += zone.metadata.name + '|';
+  digest += zone.metadata.title + '|';
   digest += zone.metadata.description + '|';
   digest += zone.metadata.organization + '|';
-  digest += zone.data.type + '|';
-  digest += zone.storage.type + '|';
-  digest += zone.hotspot.type + '|';
+  digest += zone.data.format + '|';
+  digest += zone.data.storage.collection + '|';
+  digest += zone.data.hotspot.type + '|';
 
   shasum.update( digest );
   return shasum.digest( 'hex' );
 }
 
 // Constructor method
-function BudaManager( config ) {
+function BudaManager( params ) {
   // Runtime zones list
   this.zones = [];
 
@@ -53,7 +56,10 @@ function BudaManager( config ) {
   this.agents = [];
 
   // Runtime configuration holder
-  this.config = _.defaults( config, BudaManager.DEFAULTS );
+  this.config = _.defaults( params, BudaManager.DEFAULTS );
+
+  // JSON schemas used
+  this.schemas = {};
 
   // App logging interface
   this.logger = bunyan.createLogger({
@@ -72,20 +78,21 @@ function BudaManager( config ) {
 }
 
 // Default config values
-// - db - MongoDB database used for data storage
-// - The 'home' directory must be readable and writable by the user
+// - db: MongoDB instance used for data storage
+// - home: This directory must be readable and writable by the user
 //   starting the daemon.
-// - Only 'root' can bind to ports lower than 1024 but running this
+// - port: Main TCP port used to wait for commands using the API,
+//   only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advised ( nor required )
-// - File to store existing zones information on the FS
-// - Wether to launch agents as child processes or docker containers
+// - docker: If set, launch agents as docker containers instead of
+//   child processes
+// - range: Inclusive range of TCP ports to use for agents
 BudaManager.DEFAULTS = {
   db:     'buda',
-  home:   '/root',
+  home:   '/var/run/buda',
   port:   8100,
-  list:   'zones.conf',
   docker: false,
-  ports:  '2810-2890'
+  range:  '2810-2890'
 };
 
 // Apply verifications to the home/working directory
@@ -98,8 +105,6 @@ BudaManager.prototype._verifyHome = function() {
 
   this.logger.debug( 'Check home directory is readable and writeable' );
   try {
-    // Disable this check, the singe | character is required
-    // for the bitmask according to the API
     fs.accessSync( this.config.home, fs.R_OK | fs.W_OK );
   } catch( err ) {
     this.logger.fatal( err, 'Invalid permissions' );
@@ -164,6 +169,12 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
+
+        // Parse zone declaration if using YAML format
+        if( request.payload.format && request.payload.format === 'yaml' ) {
+          request.payload.zone = YAML.parse( request.payload.zone );
+        }
+
         reply( self._updateZone( request.params.id, request.payload.zone ) );
       }
     },
@@ -176,6 +187,12 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
+
+        // Parse zone declaration if using YAML format
+        if( request.payload.format && request.payload.format === 'yaml' ) {
+          request.payload.zone = YAML.parse( request.payload.zone );
+        }
+
         reply( self._updateZone( request.params.id, request.payload.zone ) );
       }
     },
@@ -200,6 +217,12 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
+
+        // Parse zone declaration if using YAML format
+        if( request.payload.format && request.payload.format === 'yaml' ) {
+          request.payload.zone = YAML.parse( request.payload.zone );
+        }
+
         reply( self._registerZone( request.payload.zone ) );
       }
     },
@@ -225,116 +248,101 @@ BudaManager.prototype._startInterface = function() {
 };
 
 // Starts a new zone agent
+/* eslint complexity:0 */
 BudaManager.prototype._startAgent = function( zone ) {
+  var self = this;
   var cmd;
   var seed;
   var agent;
-  var output;
   var portsRange;
-  var conf = {};
 
-  // Set manager DB as part of the agent configuration
-  zone.storage.options.db = this.config.db;
-
-  // Start agent as container if running in 'docker' mode
+  // Start agent as a container if running in 'docker' mode
   if( this.config.docker ) {
     // Set default port to the one exposed on the docker image; it will
     // be dynamically mapped on launch
-    if( zone.hotspot.type === 'tcp' ) {
-      zone.hotspot.location = 8200;
+    if( zone.data.hotspot.type === 'tcp' && ! zone.data.hotspot.location ) {
+      zone.data.hotspot.location = 8200;
     }
 
-    // Setup
-    conf.id = zone.id;
-    conf.data = zone.data.options;
-    conf.storage = zone.storage.options;
-    conf.hotspot = zone.hotspot;
-
-    // Create agent
-    cmd = 'docker run -dP --link buda-storage:storage ';
-    cmd += '--name ' + zone.storage.options.collection + ' ';
+    // Create docker launch command
+    cmd = 'docker run -dP --name ' + zone.data.storage.collection + ' ';
+    if( zone.extras.docker.links ) {
+      _.each( zone.extras.docker.links, function( el ) {
+        cmd += '--link ' + el + ' ';
+      });
+    }
     cmd += zone.extras.docker.image + ' ';
-    cmd += "--conf '" + JSON.stringify( conf ) + "'";
+    cmd += "--conf '" + JSON.stringify( zone.data ) + "'";
+
+    // Start container and use the hash returned as ID
     agent = execSync( cmd ).toString().substr( 0, 12 );
     this.logger.info( 'Starting container agent: %s', agent );
     this.logger.debug({
-      configuration: conf,
+      configuration: zone.data,
       cmd:           cmd
     }, 'Starting container agent: %s', agent );
 
     this.agents.push( agent );
-    zone.agent = agent;
+    zone.extras.agent = agent;
     return;
   }
 
-  // Randomly find a port in the provided range
-  if( zone.hotspot.type === 'tcp' ) {
-    portsRange = this.config.ports.split( '-' );
+  // Start agent as a sub-process
+  // Randomly find a port in the provided range if required
+  if( zone.data.hotspot.type === 'tcp' && ! zone.data.hotspot.location ) {
+    portsRange = this.config.range.split( '-' );
     portsRange[ 0 ] = Number( portsRange[ 0 ] );
     portsRange[ 1 ] = Number( portsRange[ 1 ] );
     seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
-    zone.hotspot.location = Math.floor( seed );
+    zone.data.hotspot.location = Math.floor( seed );
   }
 
   // Sub-process setup
+  cmd = 'buda-agent-' + zone.data.format;
   if( zone.extras.handler ) {
     cmd = zone.extras.handler;
-  } else {
-    cmd = 'buda-agent-' + zone.data.type;
   }
-  conf.id = zone.id;
-  conf.data = zone.data.options;
-  conf.storage = zone.storage.options;
-  conf.hotspot = zone.hotspot;
 
   // Create agent
-  agent = spawn( cmd, ['--conf', JSON.stringify( conf ) ] );
-  this.logger.info( 'Starting agent: %s', agent.pid );
-  this.logger.debug({
-    configuration: conf,
+  agent = spawn( cmd, ['--conf', JSON.stringify( zone.data ) ] );
+  self.logger.info( 'Starting agent: %s', agent.pid );
+  self.logger.debug({
+    configuration: zone.data,
     cmd:           cmd
   }, 'Starting agent: %s', agent.pid );
 
-  // Create child logger for each individual agent
-  agent.logger = this.logger.child({
-    agent: agent.pid,
-    zone:  zone.id
-  });
+  // Add agent and attach process PID to the zone
+  self.agents.push( agent );
+  zone.extras.agent = agent.pid;
 
   // Catch information on the agent output
   agent.stdout.on( 'data', function( msg ) {
     try {
-      output = JSON.parse( msg );
-      if( output.details ) {
-        agent.logger[ output.level ]( output.details );
-      } else {
-        agent.logger[ output.level ]( output.desc );
-      }
+      self.logger.debug( msg.toString() );
     } catch( e ) {
-      agent.logger.error( 'Error decoding: %s', msg );
+      self.logger.error( 'Error decoding: %s', msg );
     }
   });
 
   // If the agent die; remove it from the list
-  agent.on( 'exit', _.bind( function() {
-    this.logger.info( 'Removing agent: %s', agent.pid );
-    this.agents.splice( _.indexOf( this.agents, agent ), 1 );
-  }, this ) );
-
-  // Add agent and attach process PID to the zone
-  this.agents.push( agent );
-  zone.agent = agent.pid;
+  agent.on( 'exit', function() {
+    self.logger.info( 'Removing agent: %s', agent.pid );
+    self.agents.splice( _.indexOf( self.agents, agent ), 1 );
+  });
 };
 
 // Stops a given zone agent
 BudaManager.prototype._stopAgent = function( zone ) {
+  // Kill agent
   if( this.config.docker ) {
-    this.logger.debug( 'Stopping container agent: %s', zone.agent );
-    execSync( 'docker rm -f ' + zone.agent );
+    this.logger.debug( 'Stopping container agent: %s', zone.extras.agent );
+    execSync( 'docker rm -f ' + zone.extras.agent );
   } else {
-    this.logger.debug( 'Stopping subprocess agent: %s', zone.agent );
-    process.kill( zone.agent, 'SIGINT' );
+    this.logger.debug( 'Stopping subprocess agent: %s', zone.extras.agent );
+    process.kill( zone.extras.agent, 'SIGINT' );
   }
+
+  // Remove zone record
   this.zones.splice( _.indexOf( this.zones, zone ), 1 );
 };
 
@@ -346,12 +354,15 @@ BudaManager.prototype._getZoneList = function() {
 // Retrieve details of a specific zone
 BudaManager.prototype._getZoneDetails = function( id ) {
   // Retrieve element from this.zones based on it's id
-  var zone = _.findWhere( this.zones, { id: id });
+  var zone = _.filter( this.zones, function( el ) {
+    return el.extras.id === id;
+  });
 
-  if( ! zone ) {
+  if( zone.length !== 1 ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
   }
+  zone = zone[ 0 ];
 
   return zone;
 };
@@ -359,12 +370,15 @@ BudaManager.prototype._getZoneDetails = function( id ) {
 // Update and existing zone
 BudaManager.prototype._updateZone = function( id, newData ) {
   // Retrieve element from this.zones based on it's id
-  var zone = _.findWhere( this.zones, { id: id });
+  var zone = _.filter( this.zones, function( el ) {
+    return el.extras.id === id;
+  });
 
-  if( ! zone ) {
+  if( zone.length !== 1 ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
   }
+  zone = zone[ 0 ];
 
   // Stop zone agent
   this._stopAgent( zone );
@@ -376,52 +390,84 @@ BudaManager.prototype._updateZone = function( id, newData ) {
 // Delete a running zone
 BudaManager.prototype._deleteZone = function( id ) {
   // Retrieve element from this.zones based on it's id
-  var zone = _.findWhere( this.zones, { id: id });
+  var zone = _.filter( this.zones, function( el ) {
+    return el.extras.id === id;
+  });
 
-  if( ! zone ) {
+  if( zone.length !== 1 ) {
     this.logger.warn( 'Invalid zone id: %s', id );
     return { error: true, desc: 'INVALID_ZONE_ID' };
   }
+  zone = zone[ 0 ];
 
   // Stop zone agent
   this._stopAgent( zone );
 
   // Remove
-  this.logger.info( 'Remove zone: %s', zone.id );
+  this.logger.info( 'Remove zone: %s', zone.extras.id );
   this.logger.debug({
     zone: zone
-  }, 'Remove zone: %s', zone.id );
+  }, 'Remove zone: %s', zone.extras.id );
 
   return zone;
 };
 
 // Register a new zone
 BudaManager.prototype._registerZone = function( zone ) {
-  // Validate required data
+  // Validation function holder
+  var zoneValidation;
+
+  // Check zone details are present
   if( ! zone ) {
     this.logger.warn( 'Missing parameters' );
     return { error: true, desc: 'MISSING_PARAMETERS' };
   }
 
-  // Calculate ID
-  zone.id = getID( zone );
+  // Not supported schema version?
+  if( ! this.schemas[ 'zone-' + zone.version ] ) {
+    this.logger.error( 'Unsupported schema version' );
+    return { error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' };
+  }
 
-  // Start agent based on zone.data.type
+  // Validate zone against the schema version used
+  zoneValidation = jsen( JSON.parse( this.schemas[ 'zone-' + zone.version ] ) );
+  if( ! zoneValidation( zone ) ) {
+    this.logger.error({ errors: zoneValidation.errors }, 'Invalid zone definition' );
+    return {
+      error:   true,
+      desc:    'INVALID_ZONE_DEFINITION',
+      details: zoneValidation.errors
+    };
+  }
+
+  // Calculate ID
+  zone.extras.id = getID( zone );
+
+  // Start zone agent
   this._startAgent( zone );
 
   // Add zone to the list
   this.zones.push( zone );
-  this.logger.info( 'Zone created: %s', zone.id );
+  this.logger.info( 'Zone created: %s', zone.extras.id );
   this.logger.debug({
     zone: zone
-  }, 'Zone created: %s', zone.id );
+  }, 'Zone created: %s', zone.extras.id );
   return zone;
 };
 
+// Show usage information
+BudaManager.prototype.printHelp = function() {
+  console.log( colors.green.bold( 'Buda Manager ver. ' + info.version ) );
+  console.log( colors.white.bold( 'Available configuration options are:' ) );
+  _.each( BudaManager.DEFAULTS, function( val, key ) {
+    console.log( colors.gray( '\t' + key + '\t' + val ) );
+  });
+};
+
 // Gracefully shutdown
-BudaManager.prototype._cleanUp = function() {
-  // Exit main process;
-  // Give 500ms to each agent to gracefully close too
+BudaManager.prototype.exit = function() {
+  // Give 500ms to each agent to gracefully exit
+  // Then exit main process too
   setTimeout( _.bind( function() {
     this.logger.info( 'Exiting Manager' );
     process.exit();
@@ -434,17 +480,10 @@ BudaManager.prototype._cleanUp = function() {
   }, this ) );
 };
 
-// Show usage information
-BudaManager.prototype.printHelp = function() {
-  console.log( colors.green.bold( 'Buda Manager ver. ' + info.version ) );
-  console.log( colors.white.bold( 'Available configuration options are:' ) );
-  _.each( BudaManager.DEFAULTS, function( val, key ) {
-    console.log( colors.gray( '\t' + key + '\t' + val ) );
-  });
-};
-
 // Kickstart for the daemon process
 BudaManager.prototype.start = function() {
+  var schemaFiles;
+
   // Looking for help ?
   if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
     this.printHelp();
@@ -456,6 +495,20 @@ BudaManager.prototype.start = function() {
   this.logger.debug({
     config: this.config
   }, 'Starting with configuration' );
+
+  // Load schemas
+  this.logger.info( 'Loading schemas' );
+  schemaFiles = fs.readdirSync( path.join( __dirname, '../schemas' ) );
+  _.each( schemaFiles, _.bind( function( el ) {
+    var name = path.basename( el, '.json' );
+    var file;
+
+    if( name.charAt( 0 ) !== '.' ) {
+      this.logger.debug( name );
+      file = path.join( __dirname, '../schemas/', el );
+      this.schemas[ name ] = fs.readFileSync( file ).toString();
+    }
+  }, this ) );
 
   // Home directory validations
   this.logger.info( 'Verifying working directory' );
@@ -477,9 +530,8 @@ BudaManager.prototype.start = function() {
 
   // Listen for interruptions and gracefully shutdown
   process.stdin.resume();
-  process.on( 'SIGINT', _.bind( function() {
-    this._cleanUp();
-  }, this ) );
+  process.on( 'SIGINT', _.bind( this.exit, this ) );
+  process.on( 'SIGTERM', _.bind( this.exit, this ) );
 };
 
 module.exports = BudaManager;

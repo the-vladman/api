@@ -1,21 +1,72 @@
 {
   "id": "http://api.datos.gob.mx/v1/schemas/zone.json",
-  "$schema": "http://json-schema.org/schema#",
+  "$schema": "http://json-schema.org/draft-04/schema#",
   "description": "Schema for the definitions of data zones handled by the BUDA platform",
-  "definitions": {},
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "version",
-    "metadata",
-    "data"
-  ],
-  "properties": {
-    "version": {
-      "type": "string",
-      "title": "Version",
-      "description": "Schema version used for the zone declaration",
-      "default": "0.1"
+  "definitions": {
+    "hotspot": {
+      "type": "object",
+      "title": "Hotspot",
+      "description": "Location used by the agent to receive data packets for processing",
+      "required": [
+        "type",
+        "location"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "description": "Type of endpoint to use, may be any of the supported methods",
+          "default": "tcp",
+          "enum": [ "tcp", "unix" ]
+        },
+        "location": {
+          "type": "string",
+          "title": "Location",
+          "description": "Final location used for receiving data, i.e.; port number, socket path, etc..."
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "title": "Storage",
+      "description": "Provides all the information required to store the data processed in a desired location",
+      "required": [
+        "type",
+        "host",
+        "db",
+        "collection",
+        "index"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "description": "Storage system used",
+          "default": "mongodb",
+          "enum": [ "mongodb" ]
+        },
+        "host": {
+          "type": "string",
+          "title": "Host",
+          "description": "Connection string that the agent will use as-is to locate and use the storage system in use"
+        },
+        "db": {
+          "type": "string",
+          "title": "Database",
+          "description": "Database used to store the data packets received"
+        },
+        "collection": {
+          "type": "string",
+          "title": "Collection",
+          "description": "Collection (or table) used to group inside the database the data packets received"
+        },
+        "index": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Index",
+          "description": "Data index(es) used for the data collection"
+        }
+      }
     },
     "metadata": {
       "type": "object",
@@ -29,7 +80,8 @@
         "license",
         "organization",
         "contactName",
-        "contactEmail"
+        "contactEmail",
+        "accessLevel"
       ],
       "properties": {
         "title": {
@@ -87,6 +139,13 @@
           "title": "Contact Email",
           "description": "Email listed as primary contact method regarding the data"
         },
+        "accessLevel": {
+          "type": "string",
+          "title": "Access Level",
+          "description": "Specify how to distribute the data",
+          "default": "public",
+          "enum": [ "public", "non-public" ]
+        },
         "identifier": {
           "type": "string",
           "title": "Identifier",
@@ -98,6 +157,24 @@
           "description": "URL to the data dictionary for the dataset"
         }
       }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "metadata",
+    "data"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "Version",
+      "description": "Schema version used for the zone declaration",
+      "default": "0.1"
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata"
     },
     "data": {
       "type": "object",
@@ -105,39 +182,16 @@
       "description": "Configuration parameters used for storage and processing of the data",
       "additionalProperties": false,
       "required": [
-        "accessLevel",
+        "storage",
         "hotspot",
-        "collection",
-        "index",
         "format"
       ],
       "properties": {
-        "accessLevel": {
-          "type": "string",
-          "title": "Access Level",
-          "description": "Specify how to distribute the data",
-          "default": "public",
-          "enum": [ "public", "non-public" ]
-        },
         "hotspot": {
-          "type": "string",
-          "title": "Hotspot",
-          "description": "Specify the endpoint type used to receive incoming data packets",
-          "default": "tcp",
-          "enum": [ "tcp", "unix" ]
+          "$ref": "#/definitions/hotspot"
         },
-        "collection": {
-          "type": "string",
-          "minLength": 5,
-          "maxLength": 40,
-          "title": "Collection",
-          "description": "Data collection used to store (as documents) all data packets received"
-        },
-        "index": {
-          "type": "string",
-          "minLength": 1,
-          "title": "Index",
-          "description": "Data index(es) used for the data collection"
+        "storage":{
+          "$ref": "#/definitions/storage"
         },
         "format": {
           "type": "string",
