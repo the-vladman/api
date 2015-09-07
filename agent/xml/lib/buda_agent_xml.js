@@ -13,8 +13,9 @@ var info = require( '../package' );
 var xmlflow = require( 'xml-flow' );
 
 // Storage schema basic definiton
+var Doc;
+var storage = null;
 var StorageSchema = new mongoose.Schema({});
-var storage = '';
 
 // Constructor method
 function BudaXMLAgent( conf ) {
@@ -26,15 +27,23 @@ function BudaXMLAgent( conf ) {
   // Configure schema and model for storage
   StorageSchema.set( 'strict', false );
   StorageSchema.set( 'collection', this.config.storage.collection );
+  Doc = mongoose.model( 'Doc', StorageSchema );
 
   // Connect to DB
-  // If we're running inside a container some ENV variables should be
-  // set, otherwise assume is a local run and fallback to localhost storage
+  // The storage host will be collected from ENV and override as config parameter
   if( process.env.STORAGE_PORT ) {
-    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  } else {
-    storage += 'localhost:27017';
+    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
   }
+  if( this.config.storage.host ) {
+    storage = this.config.storage.host;
+  }
+
+  // No storage located? exit with error
+  if( ! storage ) {
+    throw new Error( 'No storage available' );
+  }
+
+  // Append selected DB and connect
   storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
 }
@@ -53,7 +62,6 @@ BudaXMLAgent.prototype.cleanItem = function( item ) {
                    .replace( /\$name/g, '_name' )
                    .replace( /\$text/g, '_text' );
 
-  /* eslint no-param-reassign:0 */
   return JSON.parse( string );
 };
 
@@ -61,28 +69,17 @@ BudaXMLAgent.prototype.cleanItem = function( item ) {
 // This is required because of the way the flow is initiated
 BudaXMLAgent.prototype.start = function() {
   var self = this;
-  var Doc;
   var bag = [];
   var clean;
-
-  // Determine agent endpoint to use
-  if( this.config.hotspot.type === 'unix' ) {
-    this.endpoint = this.config.id + '.sock';
-  } else {
-    this.endpoint = this.config.hotspot.location;
-  }
-
-  // Storage model
-  Doc = mongoose.model( 'Doc', StorageSchema );
 
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
     // Configure xml flow
-    self.parser = xmlflow( socket, {
-      normalize: self.config.data.normalize,
-      trim:      self.config.data.trim,
-      lowercase: self.config.data.lowercase,
-      useArrays: xmlflow.ALWAYS
+    self.parser = xmlflow( socket, self.config.options );
+
+    // Parser errors
+    self.parser.on( 'error', function( err ) {
+      throw err;
     });
 
     // Rewind on complete
@@ -90,7 +87,7 @@ BudaXMLAgent.prototype.start = function() {
       if( bag.length > 0 ) {
         Doc.collection.insert( bag, function( err ) {
           if( err ) {
-            self.log( 'Storage error', 'error', err );
+            throw err;
           }
         });
         bag = [];
@@ -99,14 +96,14 @@ BudaXMLAgent.prototype.start = function() {
     });
 
     // Process records
-    self.parser.on( 'tag:' + self.config.data.pointer, function( item ) {
+    self.parser.on( 'tag:' + self.config.options.pointer, function( item ) {
       // Cleanup items
       clean = self.transform( self.cleanItem( item ) );
       bag.push( clean );
-      if( bag.length === 50 ) {
+      if( bag.length === ( self.config.storage.batch || 50 ) ) {
         Doc.collection.insert( bag, function( err ) {
           if( err ) {
-            self.log( 'Storage error', 'error', err );
+            throw err;
           }
         });
         bag = [];

@@ -11,9 +11,9 @@ var info = require( '../package' );
 var CSV = require( 'csv-stream' );
 
 // Storage schema basic definiton
-var StorageSchema = new mongoose.Schema({});
 var Doc;
-var storage = '';
+var storage = null;
+var StorageSchema = new mongoose.Schema({});
 
 // Constructor method
 function BudaCSVAgent( conf ) {
@@ -27,26 +27,32 @@ function BudaCSVAgent( conf ) {
 
   // Configure schema and model for storage
   StorageSchema.set( 'strict', false );
-  StorageSchema.set( 'collection', this.config.storage.collection );
+  StorageSchema.set( 'collection', self.config.storage.collection );
   Doc = mongoose.model( 'Doc', StorageSchema );
 
   // Connect to DB
-  // If we're running inside a container some ENV variables should be
-  // set, otherwise assume is a local run and fallback to localhost storage
+  // The storage host will be collected from ENV and override as config parameter
   if( process.env.STORAGE_PORT ) {
-    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  } else {
-    storage += 'localhost:27017';
+    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
   }
-  storage += '/' + this.config.storage.db;
+  if( self.config.storage.host ) {
+    storage = self.config.storage.host;
+  }
+
+  // No storage located? exit with error
+  if( ! storage ) {
+    throw new Error( 'No storage available' );
+  }
+
+  // Append selected DB and connect
+  storage += '/' + self.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
 
   // Configure data parser
-  this.parser = CSV.createStream({
-    delimiter:    this.config.data.separator,
-    escapeChar:   '"',
-    enclosedChar: '"'
-  });
+  if( ! self.config.options ) {
+    self.config.options = {};
+  }
+  this.parser = CSV.createStream( self.config.options );
 
   // Rewind on complete
   this.parser.on( 'end', function() {
@@ -54,7 +60,7 @@ function BudaCSVAgent( conf ) {
       self.log( 'Inserting orphan bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', err );
+          throw err;
         }
       });
       bag = [];
@@ -69,7 +75,7 @@ function BudaCSVAgent( conf ) {
       self.log( 'Inserting bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', item );
+          throw err;
         }
       });
       bag = [];
@@ -78,7 +84,7 @@ function BudaCSVAgent( conf ) {
 
   // Log errors
   this.parser.on( 'error', function( err ) {
-    self.log( err );
+    throw err;
   });
 }
 util.inherits( BudaCSVAgent, BudaAgent );

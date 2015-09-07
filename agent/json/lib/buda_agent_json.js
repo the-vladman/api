@@ -11,9 +11,9 @@ var JSONStream = require( 'JSONStream' );
 var info = require( '../package' );
 
 // Storage schema basic definiton
-var StorageSchema = new mongoose.Schema({});
 var Doc;
-var storage = '';
+var storage = null;
+var StorageSchema = new mongoose.Schema({});
 
 // Constructor method
 function BudaJSONAgent( conf ) {
@@ -27,29 +27,41 @@ function BudaJSONAgent( conf ) {
 
   // Configure schema and model for storage
   StorageSchema.set( 'strict', false );
-  StorageSchema.set( 'collection', this.config.storage.collection );
+  StorageSchema.set( 'collection', self.config.storage.collection );
   Doc = mongoose.model( 'Doc', StorageSchema );
 
   // Connect to DB
-  // If we're running inside a container some ENV variables should be
-  // set, otherwise assume is a local run and fallback to localhost storage
+  // The storage host will be collected from ENV and override as config parameter
   if( process.env.STORAGE_PORT ) {
-    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  } else {
-    storage += 'localhost:27017';
+    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
   }
-  storage += '/' + this.config.storage.db;
+  if( self.config.storage.host ) {
+    storage = self.config.storage.host;
+  }
+
+  // No storage located? exit with error
+  if( ! storage ) {
+    throw new Error( 'No storage available' );
+  }
+
+  // Append selected DB and connect
+  storage += '/' + self.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
 
   // Configure data parser
-  this.parser = JSONStream.parse( this.config.data.pointer );
+  self.parser = JSONStream.parse( self.config.options.pointer );
+
+  // Parser errors
+  self.parser.on( 'error', function( err ) {
+    throw err;
+  });
 
   // Rewind on complete
-  this.parser.on( 'end', function() {
+  self.parser.on( 'end', function() {
     if( bag.length > 0 ) {
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', err );
+          throw err;
         }
       });
       bag = [];
@@ -58,12 +70,12 @@ function BudaJSONAgent( conf ) {
   });
 
   // Process records
-  this.parser.on( 'data', function( item ) {
+  self.parser.on( 'data', function( item ) {
     bag.push( item );
-    if( bag.length === 50 ) {
+    if( bag.length === ( self.config.storage.batch || 50 ) ) {
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', err );
+          throw err;
         }
       });
       bag = [];
