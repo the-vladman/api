@@ -1,4 +1,3 @@
-/* eslint no-process-exit:0 */
 // Buda Agent
 // ==========
 // Base template of a buda agent; should be extended on
@@ -21,35 +20,38 @@ var util = require( 'util' );
 var events = require( 'events' );
 
 // Constructor
+// Configuration parameters expected should match the 'zone.data' attribute
+// according to the supported zone schema version
 function BudaAgent( conf ) {
+  // Process each data packet received
   this.parser = null;
-  this.endpoint = null;
+
+  // Read stream opened against the agent's endpoint
   this.incoming = null;
+
+  // Location to listen for incoming data packets
+  this.endpoint = conf.hotspot.location;
+
+  // Configuration parameters
   this.config = conf;
 
   // Listen for interruptions
   process.stdin.resume();
-  process.on( 'SIGINT', _.bind( function() {
-    if( this.incoming ) {
-      this.incoming.close();
-    }
-    this.cleanup();
-    process.exit();
-  }, this ) );
+  process.on( 'SIGINT', _.bind( this.exit, this ) );
+  process.on( 'SIGTERM', _.bind( this.exit, this ) );
 }
 
 // Add event emitter capabilities
 util.inherits( BudaAgent, events.EventEmitter );
 
 // Start listening for data on the endpoint
-// nc localhost PORT
-// nc -U file.sock
+// For tests you can run:
+// cat datafile | nc localhost PORT
+// cat datafile | nc -U file.sock
 BudaAgent.prototype.start = function() {
-  // Determine agent endpoint to use
-  if( this.config.hotspot.type === 'unix' ) {
-    this.endpoint = this.config.id + '.sock';
-  } else {
-    this.endpoint = this.config.hotspot.location;
+  // Check a valid parser is set
+  if( ! this.parser ) {
+    throw new Error( 'No parser set for the agent' );
   }
 
   // Create server
@@ -64,6 +66,21 @@ BudaAgent.prototype.start = function() {
   this.incoming.listen( this.endpoint, _.bind( function() {
     this.log( 'Agent ready' );
   }, this ) );
+};
+
+// Gracefull shutdown process
+BudaAgent.prototype.exit = function() {
+  // Close incoming connections
+  if( this.incoming ) {
+    this.incoming.close();
+  }
+
+  // Cleanup process
+  this.cleanup();
+
+  // Exit entirely
+  /* eslint no-process-exit:0 */
+  process.exit();
 };
 
 // Cleanup procedure
@@ -82,17 +99,16 @@ BudaAgent.prototype.transform = function( record ) {
   return record;
 };
 
-// Log information
-BudaAgent.prototype.log = function( desc, level, details ) {
-  var msg = {
-    desc:  desc,
-    level: level || 'info'
-  };
-
-  if( details ) {
-    msg.details = details;
+// Logs are sent directly to stdout as JSON message; if a string is used
+// as parameter a minimal wrap object is used for it, time is automatically
+// added to all messages
+/* eslint no-param-reassign:0 */
+BudaAgent.prototype.log = function( msg ) {
+  if( ! _.isObject( msg ) ) {
+    msg = { msg: msg };
   }
 
+  msg.time = new Date().toISOString();
   process.stdout.write( JSON.stringify( msg ) );
 };
 
