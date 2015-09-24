@@ -362,7 +362,13 @@ BudaManager.prototype._stopAgent = function( zone ) {
 
 // Retrive a list of all zones in play
 BudaManager.prototype._getZoneList = function( cb ) {
-  ZoneModel.find({}, { _id: 0 }).then( function( res ) {
+  var self = this;
+
+  ZoneModel.find({}, { _id: 0 }, function( err, res ) {
+    if( err ) {
+      self.logger.error( err );
+      return cb({ error: true, desc: 'INTERNAL_ERROR' });
+    }
     cb( res );
   });
 };
@@ -571,6 +577,15 @@ BudaManager.prototype.start = function() {
   self.logger.debug({
     config: self.restapi.info
   }, 'Interface started with configuration' );
+
+  // Re-start agents from any existing zones
+  self.logger.info( 'Restarting existing agents' );
+  self._getZoneList( function( list ) {
+    _.each( list, function( zone ) {
+      self.logger.info( 'Starting agent for zone: ' + zone._doc.extras.id );
+      self._startAgent( zone._doc );
+    });
+  });
 
   // Log final output
   self.logger.info( 'Initialization process complete' );
