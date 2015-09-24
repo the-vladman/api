@@ -28,7 +28,12 @@ var info = require( '../package' );
 var colors = require( 'colors/safe' );
 var bunyan = require( 'bunyan' );
 var jsen = require( 'jsen' );
+var mongoose = require( 'mongoose' );
 var YAML = require( 'yamljs' );
+
+// Storage elements
+var ZoneStorageSchema = new mongoose.Schema({});
+var ZoneModel;
 
 // Utility method to calculate a zone ID
 function getID( zone ) {
@@ -78,7 +83,7 @@ function BudaManager( params ) {
 }
 
 // Default config values
-// - db: MongoDB instance used for data storage
+// - storage: MongoDB instance used for data storage
 // - home: This directory must be readable and writable by the user
 //   starting the daemon.
 // - port: Main TCP port used to wait for commands using the API,
@@ -88,11 +93,11 @@ function BudaManager( params ) {
 //   child processes
 // - range: Inclusive range of TCP ports to use for agents
 BudaManager.DEFAULTS = {
-  db:     'buda',
-  home:   '/var/run/buda',
-  port:   8100,
-  docker: false,
-  range:  '2810-2890'
+  home:    '/var/run/buda',
+  port:    8100,
+  docker:  false,
+  range:   '2810-2890',
+  storage: 'localhost:27017/buda'
 };
 
 // Apply verifications to the home/working directory
@@ -145,7 +150,9 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        reply( self._getZoneList() );
+        self._getZoneList( function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -157,7 +164,9 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        reply( self._getZoneDetails( request.params.id ) );
+        self._getZoneDetails( request.params.id, function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -175,7 +184,9 @@ BudaManager.prototype._startInterface = function() {
           request.payload.zone = YAML.parse( request.payload.zone );
         }
 
-        reply( self._updateZone( request.params.id, request.payload.zone ) );
+        self._updateZone( request.params.id, request.payload.zone, function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -193,7 +204,9 @@ BudaManager.prototype._startInterface = function() {
           request.payload.zone = YAML.parse( request.payload.zone );
         }
 
-        reply( self._updateZone( request.params.id, request.payload.zone ) );
+        self._updateZone( request.params.id, request.payload.zone, function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -205,7 +218,9 @@ BudaManager.prototype._startInterface = function() {
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        reply( self._deleteZone( request.params.id ) );
+        self._deleteZone( request.params.id, function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -223,7 +238,9 @@ BudaManager.prototype._startInterface = function() {
           request.payload.zone = YAML.parse( request.payload.zone );
         }
 
-        reply( self._registerZone( request.payload.zone ) );
+        self._registerZone( request.payload.zone, function( res ) {
+          reply( res );
+        });
       }
     },
     {
@@ -320,7 +337,7 @@ BudaManager.prototype._startAgent = function( zone ) {
     try {
       self.logger.debug( msg.toString() );
     } catch( e ) {
-      self.logger.error( 'Error decoding: %s', msg );
+      self.logger.error( e );
     }
   });
 
@@ -341,81 +358,83 @@ BudaManager.prototype._stopAgent = function( zone ) {
     this.logger.debug( 'Stopping subprocess agent: %s', zone.extras.agent );
     process.kill( zone.extras.agent, 'SIGINT' );
   }
-
-  // Remove zone record
-  this.zones.splice( _.indexOf( this.zones, zone ), 1 );
 };
 
 // Retrive a list of all zones in play
-BudaManager.prototype._getZoneList = function() {
-  return this.zones;
+BudaManager.prototype._getZoneList = function( cb ) {
+  ZoneModel.find({}, { _id: 0 }).then( function( res ) {
+    cb( res );
+  });
 };
 
 // Retrieve details of a specific zone
-BudaManager.prototype._getZoneDetails = function( id ) {
-  // Retrieve element from this.zones based on it's id
-  var zone = _.filter( this.zones, function( el ) {
-    return el.extras.id === id;
+BudaManager.prototype._getZoneDetails = function( id, cb ) {
+  var self = this;
+
+  // Retrieve element based on it's id
+  ZoneModel.find({ 'extras.id': id }, { _id: 0 }, function( err, res ) {
+    if( err ) {
+      self.logger.error( err );
+      return cb({ error: true, desc: 'INTERNAL_ERROR' });
+    }
+
+    if( res.length !== 1 ) {
+      self.logger.warn( 'Invalid zone id: %s', id );
+      return cb({ error: true, desc: 'INVALID_ZONE_ID' });
+    }
+
+    return cb( res[ 0 ] );
   });
-
-  if( zone.length !== 1 ) {
-    this.logger.warn( 'Invalid zone id: %s', id );
-    return { error: true, desc: 'INVALID_ZONE_ID' };
-  }
-  zone = zone[ 0 ];
-
-  return zone;
 };
 
 // Update and existing zone
-BudaManager.prototype._updateZone = function( id, newData ) {
-  // Retrieve element from this.zones based on it's id
-  var zone = _.filter( this.zones, function( el ) {
-    return el.extras.id === id;
+BudaManager.prototype._updateZone = function( id, newData, cb ) {
+  var self = this;
+
+  // Delete existing zone
+  self._deleteZone( id, function( res ) {
+    if( res.error ) {
+      return cb({ error: true, desc: 'INTERNAL_ERROR' });
+    }
+
+    // Create new zone
+    self._registerZone( newData, function( zone ) {
+      if( zone.error ) {
+        return cb({ error: true, desc: 'INTERNAL_ERROR' });
+      }
+      cb( zone );
+    });
   });
-
-  if( zone.length !== 1 ) {
-    this.logger.warn( 'Invalid zone id: %s', id );
-    return { error: true, desc: 'INVALID_ZONE_ID' };
-  }
-  zone = zone[ 0 ];
-
-  // Stop zone agent
-  this._stopAgent( zone );
-
-  // Create zone with newData
-  return this._registerZone( newData );
 };
 
 // Delete a running zone
-BudaManager.prototype._deleteZone = function( id ) {
-  // Retrieve element from this.zones based on it's id
-  var zone = _.filter( this.zones, function( el ) {
-    return el.extras.id === id;
+BudaManager.prototype._deleteZone = function( id, cb ) {
+  var self = this;
+
+  ZoneModel.where({ 'extras.id': id }).findOneAndRemove( function( err, res ) {
+    // Delete error
+    if( err ) {
+      self.logger.error( err );
+      return cb({ error: true, desc: 'INTERNAL_ERROR' });
+    }
+
+    // Invalid ID
+    if( ! res ) {
+      self.logger.warn( 'Invalid zone id: %s', id );
+      return cb({ error: true, desc: 'INVALID_ZONE_ID' });
+    }
+
+    // Stop zone agent and return
+    self._stopAgent( res._doc );
+    return cb( res._doc );
   });
-
-  if( zone.length !== 1 ) {
-    this.logger.warn( 'Invalid zone id: %s', id );
-    return { error: true, desc: 'INVALID_ZONE_ID' };
-  }
-  zone = zone[ 0 ];
-
-  // Stop zone agent
-  this._stopAgent( zone );
-
-  // Remove
-  this.logger.info( 'Remove zone: %s', zone.extras.id );
-  this.logger.debug({
-    zone: zone
-  }, 'Remove zone: %s', zone.extras.id );
-
-  return zone;
 };
 
 // Register a new zone
-BudaManager.prototype._registerZone = function( zone ) {
+BudaManager.prototype._registerZone = function( zone, cb ) {
   // Validation function holder
   var zoneValidation;
+  var self = this;
 
   // Check zone details are present
   if( ! zone ) {
@@ -446,13 +465,16 @@ BudaManager.prototype._registerZone = function( zone ) {
   // Start zone agent
   this._startAgent( zone );
 
-  // Add zone to the list
-  this.zones.push( zone );
-  this.logger.info( 'Zone created: %s', zone.extras.id );
-  this.logger.debug({
-    zone: zone
-  }, 'Zone created: %s', zone.extras.id );
-  return zone;
+  // Store zone record
+  ZoneModel.collection.insert( zone, function( err ) {
+    if( err ) {
+      self.logger.error( err );
+      return cb({ error: true, desc: 'INTERNAL_ERROR' });
+    }
+
+    delete zone._id;
+    cb( zone );
+  });
 };
 
 // Show usage information
@@ -466,67 +488,92 @@ BudaManager.prototype.printHelp = function() {
 
 // Gracefully shutdown
 BudaManager.prototype.exit = function() {
-  // Give 500ms to each agent to gracefully exit
-  // Then exit main process too
-  setTimeout( _.bind( function() {
-    this.logger.info( 'Exiting Manager' );
-    process.exit();
-  }, this ), this.agents.length * 500 );
+  var self = this;
 
-  // Stop running agents
-  this.logger.info( 'Stopping running agents' );
-  _.each( this.zones, _.bind( function( zone ) {
-    this._stopAgent( zone );
-  }, this ) );
+  // Close storage connection
+  mongoose.connection.close( function() {
+    self.logger.info( 'Storage Disconnected' );
+    // Give 500ms to each agent to gracefully exit
+    // Then exit main process too
+    setTimeout( function() {
+      self.logger.info( 'Exiting Manager' );
+      process.exit();
+    }, self.agents.length * 500 );
+
+    // Stop running agents
+    self.logger.info( 'Stopping running agents' );
+    _.each( self.zones, function( zone ) {
+      self._stopAgent( zone );
+    });
+  });
 };
 
 // Kickstart for the daemon process
 BudaManager.prototype.start = function() {
+  var self = this;
   var schemaFiles;
 
   // Looking for help ?
-  if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
-    this.printHelp();
+  if( _.has( self.config, 'h' ) || _.has( self.config, 'help' ) ) {
+    self.printHelp();
     process.exit();
   }
 
   // Log config
-  this.logger.info( 'Buda Manager ver. ' + info.version );
-  this.logger.debug({
-    config: this.config
+  self.logger.info( 'Buda Manager ver. ' + info.version );
+  self.logger.debug({
+    config: self.config
   }, 'Starting with configuration' );
 
+  // Storage connection
+  ZoneStorageSchema.set( 'strict', false );
+  ZoneStorageSchema.set( 'collection', 'sys.zones' );
+  ZoneModel = mongoose.model( 'Doc', ZoneStorageSchema );
+  self.logger.info( 'Connecting to storage: ' + self.config.storage );
+  mongoose.connect( 'mongodb://' + self.config.storage, {
+    server: {
+      socketOptions: {
+        keepAlive:        1,
+        connectTimeoutMS: 5000
+      }
+    }
+  });
+  mongoose.connection.on( 'error', function( err ) {
+    self.logger.fatal( err );
+    process.exit();
+  });
+
   // Load schemas
-  this.logger.info( 'Loading schemas' );
+  self.logger.info( 'Loading schemas' );
   schemaFiles = fs.readdirSync( path.join( __dirname, '../schemas' ) );
-  _.each( schemaFiles, _.bind( function( el ) {
+  _.each( schemaFiles, function( el ) {
     var name = path.basename( el, '.json' );
     var file;
 
     if( name.charAt( 0 ) !== '.' ) {
-      this.logger.debug( name );
+      self.logger.debug( name );
       file = path.join( __dirname, '../schemas/', el );
-      this.schemas[ name ] = fs.readFileSync( file ).toString();
+      self.schemas[ name ] = fs.readFileSync( file ).toString();
     }
-  }, this ) );
+  });
 
   // Home directory validations
-  this.logger.info( 'Verifying working directory' );
-  this._verifyHome();
+  self.logger.info( 'Verifying working directory' );
+  self._verifyHome();
 
   // Move process to working directory
-  this.logger.info( 'Moving process to working directory' );
-  process.chdir( this.config.home );
+  self.logger.info( 'Moving process to working directory' );
+  process.chdir( self.config.home );
 
   // Start REST interface
-  this.logger.info( 'Starting REST interface' );
-  this._startInterface();
-  this.logger.debug({
-    config: this.restapi.info
+  self.logger.info( 'Starting REST interface' );
+  self._startInterface();
+  self.logger.debug({
+    config: self.restapi.info
   }, 'Interface started with configuration' );
 
   // Log final output
-  this.logger.info( 'Initialization process complete' );
+  self.logger.info( 'Initialization process complete' );
 
   // Listen for interruptions and gracefully shutdown
   process.stdin.resume();
