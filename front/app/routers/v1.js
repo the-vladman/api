@@ -15,6 +15,9 @@ module.exports = function( options ) {
   router.post( '/auth/:id/key', api.addConsumerKey );
   router.delete( '/auth/:id/key/:keyId', api.delConsumerKey );
 
+  // DCAT metadata
+  router.get( '/catalog.json', api.catalogInfo );
+
   // Data CRUD operations
   router.get( '/:dataCollection', api.runQuery );
   router.get( '/:dataCollection/:docId', api.getDocument );

@@ -57,7 +57,6 @@ Ejemplo para la distrubición de la información del catalogo:
       "modified": "2015-09-03T11:14:26Z",
       "accessLevel": "public",
       "language": "es",
-      "rights": "Información disponible para consulta publica",
       "license": "https://raw.githubusercontent.com/mxabierto/buda/master/LICENSE",
       "describedBy": "https://www.fonden.gob.mx/definitions.pdf",
       "describedByType": "application/pdf",

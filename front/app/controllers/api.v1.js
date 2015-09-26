@@ -27,6 +27,39 @@ var DataObjectSchema = new mongoose.Schema({}, {
 module.exports = function( options ) {
   // Local logger accesor
   var logger = options.logger;
+  var config = options.config;
+
+  // Helper method to format a give zone metadata for display
+  function _zoneToDCAT( zone ) {
+    var entry = {};
+
+    entry[ '@type' ] = 'dcat:Dataset';
+    entry.title = zone.metadata.title;
+    entry.description = zone.metadata.description;
+    entry.identifier = zone.data.storage.collection;
+    entry.keyword = zone.metadata.keyword;
+    entry.issued = zone.metadata.issued;
+    entry.modified = zone.metadata.modified;
+    entry.accessLevel = zone.metadata.accessLevel;
+    entry.language = zone.metadata.language;
+    entry.license = zone.metadata.license;
+    entry.publisher = {
+      '@type': 'org:Organization',
+      name:    zone.metadata.organization
+    };
+    entry.contactPoint = {
+      '@type':  'vcard:Contact',
+      fn:       zone.metadata.contactName,
+      hasEmail: zone.metadata.contactEmail
+    };
+    entry.distribution = [];
+    entry.distribution.push({
+      '@type':   'dcat:Distribution',
+      mediaType: 'application/json',
+      accessURL: '/v1/' + zone.data.storage.collection
+    });
+    return entry;
+  }
 
   // Public controller interface
   return {
@@ -288,6 +321,57 @@ module.exports = function( options ) {
         }
         logger.debug({ result: result }, 'Access key removal complete' );
         res.json( result );
+      });
+    },
+
+    // Retrieve metadata of the existing catalog
+    catalogInfo: function( req, res, next ) {
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, 'sys.zones' );
+      var queryString = req.query;
+      var page = queryString.page || 1;
+      var pageSize = queryString.pageSize || 100;
+      var query = DataObject.find({}, { _id: 0 });
+
+      // Metadata holder structure
+      var metadata = {
+        '@type':     'dcat:Catalog',
+        title:       config.title,
+        description: config.desc,
+        dataset:     []
+      };
+
+      // Count results
+      DataObject.find().count( function( err, total ) {
+        if( err ) {
+          return next( err );
+        }
+
+        // Paginate query
+        query
+          .skip( ( page - 1 ) * pageSize )
+          .limit( pageSize );
+
+        // Run query
+        query.exec( function( err2, docs ) {
+          if( err2 ) {
+            return next( err2 );
+          }
+
+          // Format results
+          _.each( docs, function( zone ) {
+            metadata.dataset.push( _zoneToDCAT( zone._doc ) );
+          });
+
+          // Return
+          res.json({
+            metadata:   metadata,
+            pagination: {
+              page:     page,
+              pageSize: pageSize,
+              total:    total
+            }
+          });
+        });
       });
     },
 
