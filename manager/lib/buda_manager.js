@@ -54,6 +54,9 @@ function getID( zone ) {
 
 // Constructor method
 function BudaManager( params ) {
+  // Runtime agents list
+  this.agents = {};
+
   // Runtime configuration holder
   this.config = _.defaults( params, BudaManager.DEFAULTS );
 
@@ -293,7 +296,7 @@ BudaManager.prototype._startAgent = function( zone ) {
       cmd:           cmd
     }, 'Starting container agent: %s', agent );
 
-    zone.extras.agent = agent;
+    self.agents[ zone.extras.id ] = agent;
     return;
   }
 
@@ -322,7 +325,7 @@ BudaManager.prototype._startAgent = function( zone ) {
   }, 'Starting agent: %s', agent.pid );
 
   // Add agent and attach process PID to the zone
-  zone.extras.agent = agent.pid;
+  self.agents[ zone.extras.id ] = agent.pid;
 
   // Catch information on the agent output
   agent.stdout.on( 'data', function( msg ) {
@@ -345,11 +348,11 @@ BudaManager.prototype._stopAgent = function( zone ) {
 
   // Kill agent
   if( self.config.docker ) {
-    self.logger.debug( 'Stopping container agent: %s', zone.extras.agent );
-    execSync( 'docker rm -f ' + zone.extras.agent );
+    self.logger.debug( 'Stopping container agent: %s', self.agents[ zone.extras.id ] );
+    execSync( 'docker rm -f ' + self.agents[ zone.extras.id ] );
   } else {
-    self.logger.debug( 'Stopping process agent: %s', zone.extras.agent );
-    process.kill( zone.extras.agent, 'SIGTERM' );
+    self.logger.debug( 'Stopping process agent: %s', self.agents[ zone.extras.id ] );
+    process.kill( self.agents[ zone.extras.id ], 'SIGTERM' );
   }
 };
 
@@ -498,10 +501,7 @@ BudaManager.prototype.exit = function() {
       self.logger.info( 'Stopping running agents' );
       if( list.length > 0 ) {
         _.each( list, function( zone ) {
-          if( self.config.docker ) {
-            self.logger.debug( 'Stopping container agent: %s', zone.extras.agent );
-            execSync( 'docker rm -f ' + zone.extras.agent );
-          }
+          self._stopAgent( zone._doc );
         });
       }
       self.logger.info( 'Exiting Manager' );
