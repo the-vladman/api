@@ -335,11 +335,6 @@ BudaManager.prototype._startAgent = function( zone ) {
       self.logger.error( e );
     }
   });
-
-  // If the agent die; remove it from the list
-  agent.on( 'exit', function() {
-    self.logger.info( 'Removing agent: %s', agent.pid );
-  });
 };
 
 // Stops a given zone agent
@@ -460,6 +455,10 @@ BudaManager.prototype._registerZone = function( zone, cb ) {
       details: zoneValidation.errors
     };
   }
+
+  // Set dates
+  zone.metadata.issued = new Date( zone.metadata.issued || Date.now() );
+  zone.metadata.modified = new Date( zone.metadata.modified || Date.now() );
 
   // Calculate ID
   zone.extras.id = getID( zone );

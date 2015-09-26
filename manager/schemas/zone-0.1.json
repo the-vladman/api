@@ -155,6 +155,16 @@
           "type": "string",
           "title": "Described By",
           "description": "URL to the data dictionary for the dataset"
+        },
+        "issued": {
+          "type": "date-time",
+          "title": "Issued Date",
+          "description": "Date the dataset was issued"
+        },
+        "modified": {
+          "type": "date-time",
+          "title": "Last Modification Date",
+          "description": "Date the dataset was last modified"
         }
       }
     }
