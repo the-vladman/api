@@ -13,11 +13,9 @@ var GJV = require( 'geojson-validation' );
 var info = require( '../package' );
 
 // Storage schema basic definiton
-/* eslint no-reserved-keys:0 */
-var StorageSchema = new mongoose.Schema({
-  data:    { type: mongoose.Schema.Types.Mixed, default: {} },
-  geojson: { type: mongoose.Schema.Types.Mixed, index: '2dsphere' }
-});
+var Doc;
+var storage = null;
+var StorageSchema = new mongoose.Schema({});
 
 // Private utility method
 // Coords should be stored as long,lat; no altitude element included
@@ -59,9 +57,7 @@ function removeDups( coords ) {
 
 // Constructor method
 function BudaGeoJSONAgent( conf ) {
-  var Doc;
   var self = this;
-  var storage = '';
   var bag = [];
 
   BudaAgent.call( this, conf );
@@ -70,29 +66,47 @@ function BudaGeoJSONAgent( conf ) {
   this.log( 'Buda GeoJSON Agent ver. ' + info.version );
 
   // Configure schema and model for storage
-  StorageSchema.set( 'collection', this.config.storage.collection );
+  /* eslint no-reserved-keys:0 */
+  StorageSchema = new mongoose.Schema({
+    data:    { type: mongoose.Schema.Types.Mixed, default: {} },
+    geojson: { type: mongoose.Schema.Types.Mixed, index: '2dsphere' }
+  });
+  StorageSchema.set( 'strict', false );
+  StorageSchema.set( 'collection', self.config.storage.collection );
   Doc = mongoose.model( 'Doc', StorageSchema );
 
   // Connect to DB
-  // If we're running inside a container some ENV variables should be
-  // set, otherwise assume is a local run and fallback to localhost storage
+  // The storage host will be collected from ENV and override as config parameter
   if( process.env.STORAGE_PORT ) {
-    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  } else {
-    storage += 'localhost:27017';
+    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
   }
-  storage += '/' + this.config.storage.db;
+  if( self.config.storage.host ) {
+    storage = self.config.storage.host;
+  }
+
+  // No storage located? exit with error
+  if( ! storage ) {
+    throw new Error( 'No storage available' );
+  }
+
+  // Append selected DB and connect
+  storage += '/' + self.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
 
   // Configure data parser
-  this.parser = JSONStream.parse( this.config.data.pointer );
+  self.parser = JSONStream.parse( self.config.options.pointer );
+
+  // Parser errors
+  self.parser.on( 'error', function( err ) {
+    throw err;
+  });
 
   // Rewind on complete
-  this.parser.on( 'end', function() {
+  self.parser.on( 'end', function() {
     if( bag.length > 0 ) {
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
-          self.log( 'Storage error', 'error', err );
+          throw err;
         }
       });
       bag = [];
@@ -101,23 +115,23 @@ function BudaGeoJSONAgent( conf ) {
   });
 
   // Process records
-  this.parser.on( 'data', function( obj ) {
+  self.parser.on( 'data', function( obj ) {
     var i;
     var coords = obj.geometry.coordinates;
 
     // Remove altitude if required
-    if( self.config.data.removeAltitude ) {
+    if( self.config.options.removeAltitude ) {
       removeAltitude( coords );
     }
 
     // Remove duplicate points
-    if( self.config.data.removeDuplicatePoints ) {
+    if( self.config.options.removeDuplicatePoints ) {
       for( i = 0; i < obj.geometry.coordinates[ 0 ].length; i ++ ) {
         obj.geometry.coordinates[ 0 ] = removeDups( obj.geometry.coordinates[ 0 ] );
       }
     }
 
-    // Final feature validation, only valid features will be stored
+    // Final feature validation, only valid GeoJSON features will be stored
     GJV.isFeature( obj, function( valid ) {
       var item;
 
@@ -130,16 +144,16 @@ function BudaGeoJSONAgent( conf ) {
           item.data.fromOrigin = obj.properties;
         }
         bag.push( item );
-        if( bag.length === 20 ) {
+        if( bag.length === ( self.config.storage.batch || 20 ) ) {
           Doc.collection.insert( bag, function( err ) {
             if( err ) {
-              self.log( 'Storage error', 'error', err );
+              throw err;
             }
           });
           bag = [];
         }
       } else {
-        self.log( 'Invalid GeoJSON feature', 'error', obj );
+        self.log( 'Invalid GeoJSON feature' );
       }
     });
   });

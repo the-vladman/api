@@ -41,14 +41,12 @@ function BudaFront( config ) {
   this.server.use( cookieParser() );
   this.server.use( bodyParser.json() );
 
-  // Allow CORS access
+  // Allow CORS and set version header
   this.server.use( function( req, res, next ) {
     var headers = 'Origin, X-Requested-With, Content-Type, Accept';
 
     res.header( 'Access-Control-Allow-Origin', '*' );
     res.header( 'Access-Control-Allow-Headers', headers );
-
-    // Set buda version header
     res.header( 'X-BUDA-Version', info.version );
     next();
   });
@@ -59,8 +57,10 @@ function BudaFront( config ) {
 // - Only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advaised ( or required )
 BudaFront.DEFAULTS = {
-  db:   'buda',
-  port: 8000
+  port:    8000,
+  storage: 'localhost:27017/buda',
+  title:   'BUDA',
+  desc:    'Handled data catalog'
 };
 
 // Show usage information
@@ -72,33 +72,40 @@ BudaFront.prototype.printHelp = function() {
   });
 };
 
+// Clean exit process
+BudaFront.prototype.exit = function() {
+  var self = this;
+
+  // Close storage connection and exit
+  self.logger.info( 'Stopping server' );
+  mongoose.connection.close( function() {
+    self.logger.debug( 'Storage disconnected' );
+    self.logger.debug( 'Bye' );
+    process.exit();
+  });
+};
+
 // Kickstart for the daemon process
 BudaFront.prototype.start = function() {
-  var logger = this.logger;
-  var server = this.server;
-  var storage = '';
+  var self = this;
+  var logger = self.logger;
+  var server = self.server;
 
   // Looking for help ?
-  if( _.has( this.config, 'h' ) || _.has( this.config, 'help' ) ) {
-    this.printHelp();
+  if( _.has( self.config, 'h' ) || _.has( self.config, 'help' ) ) {
+    self.printHelp();
     process.exit();
   }
 
   // Log config
   logger.info( 'Buda Front ver. ' + info.version );
   logger.debug({
-    config: this.config
+    config: self.config
   }, 'Starting with configuration' );
 
   // Connect to DB
-  if( process.env.STORAGE_PORT ) {
-    storage += process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  } else {
-    storage += 'localhost:27017';
-  }
-  storage += '/' + this.config.db;
-  logger.info( 'Establishing database connection: %s', storage );
-  mongoose.connect( 'mongodb://' + storage );
+  logger.info( 'Establishing database connection: %s', self.config.storage );
+  mongoose.connect( 'mongodb://' + self.config.storage );
 
   // Load application models
   logger.info( 'Loading application models' );
@@ -114,7 +121,8 @@ BudaFront.prototype.start = function() {
 
     logger.debug( 'Loading router: %s', route );
     server.use( '/' + route, require( './app/routers/' + route )({
-      logger: logger
+      logger: logger,
+      config: self.config
     }) );
   });
 
@@ -139,8 +147,13 @@ BudaFront.prototype.start = function() {
   });
 
   // Start listening for requests
-  logger.info( 'Listening for requests on port: %s', this.config.port );
-  server.listen( this.config.port );
+  logger.info( 'Listening for requests on port: %s', self.config.port );
+  server.listen( self.config.port );
+
+  // Listen for interruptions and gracefully shutdown
+  process.stdin.resume();
+  process.on( 'SIGINT', _.bind( this.exit, this ) );
+  process.on( 'SIGTERM', _.bind( this.exit, this ) );
 };
 
 // Exports constructor method
