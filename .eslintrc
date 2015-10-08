@@ -109,7 +109,6 @@
     "no-redeclare": 2,
     "no-regex-spaces": 2,
     "no-return-assign": 2,
-    "no-reserved-keys": 2,
     "no-script-url": 2,
     "no-self-compare": 2,
     "no-sequences": 2,
@@ -139,12 +138,12 @@
         "objectsInObjects": true,
         "arraysInObjects": true
       }],
-    "one-var": 2,
+    "one-var": [2, "never"],
     "operator-assignment": [2, "always"],
     "operator-linebreak": [2, "after"],
     "padded-blocks": [2, "never"],
     "quotes": [2, "single", "avoid-escape"],
-    "quote-props": [1, "as-needed"],
+    "quote-props": [2, "consistent-as-needed"],
     "radix": 2,
     "use-isnan": 2,
     "semi": [2, "always"],
@@ -172,7 +171,7 @@
     "spaced-comment": [2, "always", {
         "exceptions":["-", "+"]
       }],
-    "strict": 2,
+    "strict": [2, "global"],
     "valid-jsdoc": [2, {
         "requireParamDescription": true,
         "requireReturn": false,
