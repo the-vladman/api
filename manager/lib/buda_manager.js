@@ -100,7 +100,12 @@ BudaManager.DEFAULTS = {
 // Apply verifications to the home/working directory
 BudaManager.prototype._verifyHome = function() {
   this.logger.debug( 'Check home directory exist' );
-  if( ! fs.existsSync( this.config.home ) ) {
+
+  try {
+    if( ! fs.statSync( this.config.home ).isDirectory() ) {
+      throw new Error( 'Home directory does not exist' );
+    }
+  } catch( e ) {
     this.logger.fatal( 'Home directory does not exist' );
     process.exit();
   }
