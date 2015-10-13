@@ -4,9 +4,13 @@
   "description": "Base template for Buda Agents",
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxabierto/buda.git"
+  },
   "dependencies": {
     "minimist": "=1.2.0",
-    "mongoose": "=4.0.6",
+    "mongoose": "=4.1.11",
     "underscore": "=1.8.3"
   }
 }

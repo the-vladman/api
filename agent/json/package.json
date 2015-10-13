@@ -7,8 +7,12 @@
   },
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxabierto/buda.git"
+  },
   "dependencies": {
-    "JSONStream": "=0.10.0"
+    "JSONStream": "=1.0.6"
   },
   "bin": {
     "buda-agent-json": "./bin/buda-agent-json"

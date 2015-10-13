@@ -7,6 +7,10 @@
   },
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxabierto/buda.git"
+  },
   "dependencies": {
     "csv-stream": "=0.1.3"
   },

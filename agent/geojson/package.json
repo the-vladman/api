@@ -7,9 +7,13 @@
   },
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxabierto/buda.git"
+  },
   "dependencies": {
-    "JSONStream": "=0.10.0",
-    "geojson-validation": "=0.1.5"
+    "JSONStream": "=1.0.6",
+    "geojson-validation": "=0.1.6"
   },
   "bin": {
     "buda-agent-geojson": "./bin/buda-agent-geojson"
