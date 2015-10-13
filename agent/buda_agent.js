@@ -17,6 +17,7 @@
 var _ = require( 'underscore' );
 var net = require( 'net' );
 var util = require( 'util' );
+var zlib = require( 'zlib' );
 var events = require( 'events' );
 
 // Constructor
@@ -26,7 +27,7 @@ function BudaAgent( conf ) {
   // Process each data packet received
   this.parser = null;
 
-  // Read stream opened against the agent's endpoint
+  // Readable stream opened against the agent's endpoint
   this.incoming = null;
 
   // Location to listen for incoming data packets
@@ -34,6 +35,20 @@ function BudaAgent( conf ) {
 
   // Configuration parameters
   this.config = conf;
+  if( ! _.has( this.config, 'compression' ) ) {
+    this.config.compression = 'none';
+  }
+
+  // Add a data decompressor if required
+  switch( this.config.compression ) {
+    case 'gzip':
+      this.decrompressor = zlib.createGunzip();
+      break;
+    case 'none':
+    default:
+      this.config.compression = 'none';
+      this.decrompressor = null;
+  }
 
   // Listen for interruptions
   process.stdin.resume();
@@ -56,10 +71,13 @@ BudaAgent.prototype.start = function() {
 
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
-    // Prevent parser from exiting ond 'end' events
-    socket.pipe( this.parser, {
-      end: false
-    });
+    if( this.config.compression !== 'none' ) {
+      socket
+        .pipe( this.decrompressor, { end: false })
+        .pipe( this.parser, { end: false });
+    } else {
+      socket.pipe( this.parser, { end: false });
+    }
   }, this ) );
 
   // Start listening for data
@@ -87,7 +105,6 @@ BudaAgent.prototype.exit = function() {
 // Just logging message by default, could be implemented based on
 // the custom agent specific requirements
 BudaAgent.prototype.cleanup = function() {
-  this.log( 'Closing agent' );
   return;
 };
 
@@ -95,7 +112,6 @@ BudaAgent.prototype.cleanup = function() {
 // Just logging message by default, could be implemented based on
 // the custom agent specific requirements
 BudaAgent.prototype.transform = function( record ) {
-  this.log( 'Preparing data' );
   return record;
 };
 
@@ -104,12 +120,10 @@ BudaAgent.prototype.transform = function( record ) {
 // added to all messages
 /* eslint no-param-reassign:0 */
 BudaAgent.prototype.log = function( msg ) {
-  if( ! _.isObject( msg ) ) {
-    msg = { msg: msg };
+  if( _.isObject( msg ) ) {
+    msg = JSON.stringify( msg );
   }
-
-  msg.time = new Date().toISOString();
-  process.stdout.write( JSON.stringify( msg ) );
+  process.stdout.write( msg );
 };
 
 module.exports = BudaAgent;

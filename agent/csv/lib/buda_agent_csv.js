@@ -57,7 +57,6 @@ function BudaCSVAgent( conf ) {
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.log( 'Inserting orphan bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
           throw err;
@@ -72,7 +71,6 @@ function BudaCSVAgent( conf ) {
   this.parser.on( 'data', function( item ) {
     bag.push( self.transform( item ) );
     if( bag.length === ( self.config.storage.batch || 50 ) ) {
-      self.log( 'Inserting bag' );
       Doc.collection.insert( bag, function( err ) {
         if( err ) {
           throw err;

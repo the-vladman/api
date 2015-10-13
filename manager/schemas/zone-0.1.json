@@ -208,6 +208,13 @@
           "title": "Format",
           "description": "Expected data format, a valid agent must be installed for the data type"
         },
+        "compression": {
+          "type": "string",
+          "title": "Compression",
+          "description": "Data compression method, if any",
+          "default": "none",
+          "enum": ["none", "gzip"]
+        },
         "options": {
           "type": "object",
           "title": "Agent Options",

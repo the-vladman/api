@@ -13,6 +13,7 @@
   },
   "data": {
     "format": "geojson",
+    "compression": "gzip",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",
