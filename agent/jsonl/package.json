@@ -1,0 +1,17 @@
+{
+  "name": "buda-agent-jsonl",
+  "version": "0.1.0",
+  "description": "Buda Agent for JSONL processing",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "Ben Cessa <ben@pixative.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mxabierto/buda.git"
+  },
+  "bin": {
+    "buda-agent-json": "./bin/buda-agent-jsonl"
+  }
+}

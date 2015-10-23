@@ -1,0 +1,33 @@
+version: '0.1'
+metadata:
+  title: JSONL Sample
+  description: Just a sample JSONL zone
+  keyword:
+    - sample
+    - jsonl
+    - zone
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Eduardo Clark
+  contactEmail: hola@datos.gob.mx
+  accessLevel: public
+data:
+  format: jsonl
+  compression: gzip
+  storage:
+    type: mongodb
+    host: localhost:27017
+    db: buda
+    collection: lines
+    index: _id
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+extras:
+  docker:
+    image: mxabierto/buda-agent-jsonl
+    links:
+      - buda-storage:storage

@@ -1,0 +1,25 @@
+#! /usr/bin/env node
+
+// Enable strict syntax mode
+'use strict';
+
+// Requirements
+var minimist = require( 'minimist' );
+var BudaJSONLAgent = require( '../lib/buda_agent_jsonl' );
+var params = minimist( process.argv.slice( 2 ) );
+var config;
+var agent;
+
+// Get runtime configuration
+delete params._;
+if( params.conf === undefined ) {
+  throw new Error( 'MISSING_CONFIGURATION' );
+}
+config = JSON.parse( params.conf );
+
+// Set process title
+process.title = 'buda-agent-line: ' + config.storage.collection;
+
+// Start agent
+agent = new BudaJSONLAgent( config );
+agent.start();
