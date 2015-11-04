@@ -13,7 +13,6 @@
   },
   "data": {
     "format": "jsonl",
-    "compression": "gzip",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",

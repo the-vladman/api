@@ -1,3 +1,17 @@
+// Buda Agent Line
+// ===============
+// Base implementation for agents processing data line-by-line,
+// custom implementations need only define the proper 'transform' method.
+//
+// function CustomLineAgent( conf ) {
+//   BudaAgent.call( this, conf );
+// }
+// util.inherits( CustomLineAgent, BudaLineAgent );
+//
+// CustomLineAgent.prototype.transform = function( line ) {
+//   /* Custom processing code here */
+// };
+
 // Enable strict syntax mode
 'use strict';
 
@@ -8,50 +22,13 @@ var BudaAgent = require( './buda_agent' );
 var _ = require( 'underscore' );
 var net = require( 'net' );
 var util = require( 'util' );
-var mongoose = require( 'mongoose' );
 var byline = require( 'byline' );
-
-// Storage schema basic definiton
-var Doc;
-var storage = null;
-var StorageSchema = new mongoose.Schema({});
 
 // Constructor method
 function BudaLineAgent( conf ) {
-  var self = this;
-
   BudaAgent.call( this, conf );
-
-  // Configure schema and model for storage
-  StorageSchema.set( 'strict', false );
-  StorageSchema.set( 'collection', self.config.storage.collection );
-  Doc = mongoose.model( 'Doc', StorageSchema );
-
-  // Connect to DB
-  // The storage host will be collected from ENV and override as config parameter
-  if( process.env.STORAGE_PORT ) {
-    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  }
-  if( self.config.storage.host ) {
-    storage = self.config.storage.host;
-  }
-
-  // No storage located? exit with error
-  if( ! storage ) {
-    throw new Error( 'No storage available' );
-  }
-
-  // Append selected DB and connect
-  storage += '/' + self.config.storage.db;
-  mongoose.connect( 'mongodb://' + storage );
 }
 util.inherits( BudaLineAgent, BudaAgent );
-
-// Disconnect from database on cleanup
-BudaLineAgent.prototype.cleanup = function() {
-  this.log( 'Disconnect DB' );
-  mongoose.disconnect();
-};
 
 // Empty tranform method, should be replaced on custom implementations
 BudaLineAgent.prototype.transform = function( line ) {
@@ -64,13 +41,19 @@ BudaLineAgent.prototype.start = function() {
   var self = this;
   var bag = [];
 
+  // Connect to data storage using the parent implementation
+  BudaLineAgent.super_.prototype.connectStorage.apply( this );
+
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
     // Set up parser
     if( self.config.compression !== 'none' ) {
-      self.parser = byline( socket.pipe( self.decrompressor, { end: false }), {
-        end: false
-      });
+      throw new Error( 'GZIP functionality not ready!' );
+      // The decompressor closes the stream before the first iteration, passing
+      // end: false is not working with the parser being used
+      // self.parser = byline( socket.pipe( self.decrompressor ), {
+      //   end: false
+      // });
     } else {
       self.parser = byline( socket, {
         end: false
@@ -85,7 +68,7 @@ BudaLineAgent.prototype.start = function() {
     // Complete
     self.parser.on( 'end', function() {
       if( bag.length > 0 ) {
-        Doc.collection.insert( bag, function( err ) {
+        self.model.collection.insert( bag, function( err ) {
           if( err ) {
             throw err;
           }
@@ -98,7 +81,7 @@ BudaLineAgent.prototype.start = function() {
     self.parser.on( 'data', function( line ) {
       bag.push( self.transform( line.toString() ) );
       if( bag.length === ( self.config.storage.batch || 5 ) ) {
-        Doc.collection.insert( bag, function( err ) {
+        self.model.collection.insert( bag, function( err ) {
           if( err ) {
             throw err;
           }

@@ -18,6 +18,7 @@ var _ = require( 'underscore' );
 var net = require( 'net' );
 var util = require( 'util' );
 var zlib = require( 'zlib' );
+var mongoose = require( 'mongoose' );
 var events = require( 'events' );
 
 // Constructor
@@ -50,6 +51,12 @@ function BudaAgent( conf ) {
       this.decrompressor = null;
   }
 
+  // Configure schema and base data model for storage
+  this.storageSchema = new mongoose.Schema({});
+  this.storageSchema.set( 'strict', false );
+  this.storageSchema.set( 'collection', this.config.storage.collection );
+  this.model = mongoose.model( 'Doc', this.storageSchema );
+
   // Listen for interruptions
   process.stdin.resume();
   process.on( 'SIGINT', _.bind( this.exit, this ) );
@@ -68,6 +75,9 @@ BudaAgent.prototype.start = function() {
   if( ! this.parser ) {
     throw new Error( 'No parser set for the agent' );
   }
+
+  // Connect to data storage
+  this.connectStorage();
 
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
@@ -93,7 +103,10 @@ BudaAgent.prototype.exit = function() {
     this.incoming.close();
   }
 
-  // Cleanup process
+  // Close DB connection
+  mongoose.disconnect();
+
+  // Custom cleanup process
   this.cleanup();
 
   // Exit entirely
@@ -113,6 +126,30 @@ BudaAgent.prototype.cleanup = function() {
 // the custom agent specific requirements
 BudaAgent.prototype.transform = function( record ) {
   return record;
+};
+
+// Stablish a connection with the used data storage
+BudaAgent.prototype.connectStorage = function() {
+  var storage = null;
+
+  // Connect to DB
+  // The storage host will be collected from ENV and override as config parameter
+  if( process.env.STORAGE_PORT ) {
+    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
+  }
+  if( this.config.storage.host ) {
+    storage = this.config.storage.host;
+  }
+
+  // No storage located? exit with error
+  if( ! storage ) {
+    throw new Error( 'No storage available' );
+  }
+
+  // Append selected DB and connect
+  storage += '/' + this.config.storage.db;
+  mongoose.connect( 'mongodb://' + storage );
+  return;
 };
 
 // Logs are sent directly to stdout as JSON message; if a string is used
