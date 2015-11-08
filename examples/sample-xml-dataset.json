@@ -13,6 +13,7 @@
   },
   "data": {
     "format": "xml",
+    "compression": "none",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",

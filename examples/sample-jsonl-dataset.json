@@ -1,9 +1,9 @@
 {
   "version": "0.1",
   "metadata": {
-    "title": "GeoJSON Sample",
-    "description": "Just a sample GeoJSON zone",
-    "keyword": ["sample", "geojson", "zone"],
+    "title": "JSONL Sample",
+    "description": "Just a sample JSONL zone",
+    "keyword": ["sample", "jsonl", "zone"],
     "language": ["es-MX"],
     "license": "http://datos.gob.mx/libreusomx/",
     "organization": "México Abierto",
@@ -12,12 +12,13 @@
     "accessLevel": "public"
   },
   "data": {
-    "format": "geojson",
+    "format": "jsonl",
+    "compression": "none",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",
       "db": "buda",
-      "collection": "callesVeracruz",
+      "collection": "lines",
       "index": "_id"
     },
     "hotspot": {
@@ -25,14 +26,11 @@
       "location": ""
     },
     "options": {
-      "pointer": "features.*",
-      "removeAltitude": true,
-      "removeDuplicatePoints": true
     }
   },
   "extras": {
     "docker": {
-      "image": "mxabierto/buda-agent-geojson",
+      "image": "mxabierto/buda-agent-jsonl",
       "links": [
         "buda-storage:storage"
       ]

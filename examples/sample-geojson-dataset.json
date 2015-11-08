@@ -1,9 +1,9 @@
 {
   "version": "0.1",
   "metadata": {
-    "title": "CSV Sample",
-    "description": "Just a sample CSV zone",
-    "keyword": ["sample", "csv", "zone"],
+    "title": "GeoJSON Sample",
+    "description": "Just a sample GeoJSON zone",
+    "keyword": ["sample", "geojson", "zone"],
     "language": ["es-MX"],
     "license": "http://datos.gob.mx/libreusomx/",
     "organization": "México Abierto",
@@ -12,27 +12,28 @@
     "accessLevel": "public"
   },
   "data": {
-    "format": "csv",
+    "format": "geojson",
+    "compression": "none",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",
       "db": "buda",
-      "collection": "codigosPostales",
-      "index": "d_codigo"
+      "collection": "callesVeracruz",
+      "index": "_id"
     },
     "hotspot": {
       "type": "tcp",
       "location": ""
     },
     "options": {
-      "separator": ",",
-      "escapeChar":   "\"",
-      "enclosedChar": "\""
+      "pointer": "features.*",
+      "removeAltitude": true,
+      "removeDuplicatePoints": true
     }
   },
   "extras": {
     "docker": {
-      "image": "mxabierto/buda-agent-csv",
+      "image": "mxabierto/buda-agent-geojson",
       "links": [
         "buda-storage:storage"
       ]

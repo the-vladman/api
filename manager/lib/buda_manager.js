@@ -2,16 +2,16 @@
 // Buda Manager
 // ============
 // Handle a graph of subprocesses for data manipulation on
-// specific zones and provides a REST interface for management.
+// specific datasets and provides a REST interface for management.
 //
 // Available commands:
-//    getZoneList        GET /
-//    getZoneDetails     GET /{id}
-//    updateZone         PUT /{id}
-//    updateZone         PATCH /{id}
-//    deleteZone         DELETE /{id}
-//    registerZone       POST /
-//    ping               GET /ping
+//    getDatasetList        GET /
+//    getDatasetDetails     GET /{id}
+//    updateDataset         PUT /{id}
+//    updateDataset         PATCH /{id}
+//    deleteDataset         DELETE /{id}
+//    registerDataset       POST /
+//    ping                  GET /ping
 
 // Enable strict syntax mode
 'use strict';
@@ -32,21 +32,21 @@ var mongoose = require( 'mongoose' );
 var YAML = require( 'yamljs' );
 
 // Storage elements
-var ZoneStorageSchema = new mongoose.Schema({});
-var ZoneModel;
+var DatasetStorageSchema = new mongoose.Schema({});
+var DatasetModel;
 
-// Utility method to calculate a zone ID
-function getID( zone ) {
+// Utility method to calculate a dataset ID
+function getID( dataset ) {
   var shasum = crypto.createHash( 'sha1' );
   var digest = '|';
 
-  digest += zone.version + '|';
-  digest += zone.metadata.title + '|';
-  digest += zone.metadata.description + '|';
-  digest += zone.metadata.organization + '|';
-  digest += zone.data.format + '|';
-  digest += zone.data.storage.collection + '|';
-  digest += zone.data.hotspot.type + '|';
+  digest += dataset.version + '|';
+  digest += dataset.metadata.title + '|';
+  digest += dataset.metadata.description + '|';
+  digest += dataset.metadata.organization + '|';
+  digest += dataset.data.format + '|';
+  digest += dataset.data.storage.collection + '|';
+  digest += dataset.data.hotspot.type + '|';
 
   shasum.update( digest );
   return shasum.digest( 'hex' );
@@ -147,12 +147,12 @@ BudaManager.prototype._startInterface = function() {
       method:  'GET',
       path:    '/',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Retrieve zone list' );
+        self.logger.info( 'Request: Retrieve dataset list' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        self._getZoneList( function( res ) {
+        self._getDatasetList( function( res ) {
           reply( res );
         });
       }
@@ -161,12 +161,12 @@ BudaManager.prototype._startInterface = function() {
       method:  'GET',
       path:    '/{id}',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Retrieve zone details' );
+        self.logger.info( 'Request: Retrieve dataset details' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        self._getZoneDetails( request.params.id, function( res ) {
+        self._getDatasetDetails( request.params.id, function( res ) {
           reply( res );
         });
       }
@@ -175,18 +175,18 @@ BudaManager.prototype._startInterface = function() {
       method:  'PUT',
       path:    '/{id}',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Update zone' );
+        self.logger.info( 'Request: Update dataset' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
 
-        // Parse zone declaration if using YAML format
+        // Parse dataset declaration if using YAML format
         if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.zone = YAML.parse( request.payload.zone );
+          request.payload.dataset = YAML.parse( request.payload.dataset );
         }
 
-        self._updateZone( request.params.id, request.payload.zone, function( res ) {
+        self._updateDataset( request.params.id, request.payload.dataset, function( res ) {
           reply( res );
         });
       }
@@ -195,18 +195,18 @@ BudaManager.prototype._startInterface = function() {
       method:  'PATCH',
       path:    '/{id}',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Update zone' );
+        self.logger.info( 'Request: Update dataset' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
 
-        // Parse zone declaration if using YAML format
+        // Parse dataset declaration if using YAML format
         if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.zone = YAML.parse( request.payload.zone );
+          request.payload.dataset = YAML.parse( request.payload.dataset );
         }
 
-        self._updateZone( request.params.id, request.payload.zone, function( res ) {
+        self._updateDataset( request.params.id, request.payload.dataset, function( res ) {
           reply( res );
         });
       }
@@ -215,12 +215,12 @@ BudaManager.prototype._startInterface = function() {
       method:  'DELETE',
       path:    '/{id}',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Delete zone' );
+        self.logger.info( 'Request: Delete dataset' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
-        self._deleteZone( request.params.id, function( res ) {
+        self._deleteDataset( request.params.id, function( res ) {
           reply( res );
         });
       }
@@ -229,18 +229,18 @@ BudaManager.prototype._startInterface = function() {
       method:  'POST',
       path:    '/',
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Create zone' );
+        self.logger.info( 'Request: Create dataset' );
         self.logger.debug({
           params:  request.params,
           headers: request.headers
         }, 'Request details' );
 
-        // Parse zone declaration if using YAML format
+        // Parse dataset declaration if using YAML format
         if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.zone = YAML.parse( request.payload.zone );
+          request.payload.dataset = YAML.parse( request.payload.dataset );
         }
 
-        self._registerZone( request.payload.zone, function( res ) {
+        self._registerDataset( request.payload.dataset, function( res ) {
           reply( res );
         });
       }
@@ -266,9 +266,9 @@ BudaManager.prototype._startInterface = function() {
   this.restapi.start();
 };
 
-// Starts a new zone agent
+// Starts a new dataset agent
 /* eslint complexity:0 */
-BudaManager.prototype._startAgent = function( zone ) {
+BudaManager.prototype._startAgent = function( dataset ) {
   var self = this;
   var cmd;
   var seed;
@@ -279,58 +279,58 @@ BudaManager.prototype._startAgent = function( zone ) {
   if( self.config.docker ) {
     // Set default port to the one exposed on the docker image; it will
     // be dynamically mapped on launch
-    if( zone.data.hotspot.type === 'tcp' && ! zone.data.hotspot.location ) {
-      zone.data.hotspot.location = 8200;
+    if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
+      dataset.data.hotspot.location = 8200;
     }
 
     // Create docker launch command
-    cmd = 'docker run -dP --name ' + zone.data.storage.collection + ' ';
-    if( zone.extras.docker.links ) {
-      _.each( zone.extras.docker.links, function( el ) {
+    cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
+    if( dataset.extras.docker.links ) {
+      _.each( dataset.extras.docker.links, function( el ) {
         cmd += '--link ' + el + ' ';
       });
     }
-    cmd += zone.extras.docker.image + ' ';
-    cmd += "--conf '" + JSON.stringify( zone.data ) + "'";
+    cmd += dataset.extras.docker.image + ' ';
+    cmd += "--conf '" + JSON.stringify( dataset.data ) + "'";
 
     // Start container and use the hash returned as ID
     agent = execSync( cmd ).toString().substr( 0, 12 );
     self.logger.info( 'Starting container agent: %s', agent );
     self.logger.debug({
-      configuration: zone.data,
+      configuration: dataset.data,
       cmd:           cmd
     }, 'Starting container agent: %s', agent );
 
-    self.agents[ zone.extras.id ] = agent;
+    self.agents[ dataset.extras.id ] = agent;
     return;
   }
 
   // Start agent as a sub-process
   // Randomly find a port in the provided range if required
-  if( zone.data.hotspot.type === 'tcp' && ! zone.data.hotspot.location ) {
+  if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
     portsRange = this.config.range.split( '-' );
     portsRange[ 0 ] = Number( portsRange[ 0 ] );
     portsRange[ 1 ] = Number( portsRange[ 1 ] );
     seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
-    zone.data.hotspot.location = Math.floor( seed );
+    dataset.data.hotspot.location = Math.floor( seed );
   }
 
   // Sub-process setup
-  cmd = 'buda-agent-' + zone.data.format;
-  if( zone.extras.handler ) {
-    cmd = zone.extras.handler;
+  cmd = 'buda-agent-' + dataset.data.format;
+  if( dataset.extras.handler ) {
+    cmd = dataset.extras.handler;
   }
 
   // Create agent
-  agent = spawn( cmd, ['--conf', JSON.stringify( zone.data ) ] );
+  agent = spawn( cmd, ['--conf', JSON.stringify( dataset.data ) ] );
   self.logger.info( 'Starting agent: %s', agent.pid );
   self.logger.debug({
-    configuration: zone.data,
+    configuration: dataset.data,
     cmd:           cmd
   }, 'Starting agent: %s', agent.pid );
 
-  // Add agent and attach process PID to the zone
-  self.agents[ zone.extras.id ] = agent.pid;
+  // Add agent and attach process PID to the dataset
+  self.agents[ dataset.extras.id ] = agent.pid;
 
   // Catch information on the agent output
   agent.stdout.on( 'data', function( msg ) {
@@ -342,25 +342,29 @@ BudaManager.prototype._startAgent = function( zone ) {
   });
 };
 
-// Stops a given zone agent
-BudaManager.prototype._stopAgent = function( zone ) {
+// Stops a given dataset agent
+BudaManager.prototype._stopAgent = function( dataset ) {
   var self = this;
 
   // Kill agent
   if( self.config.docker ) {
-    self.logger.debug( 'Stopping container agent: %s', self.agents[ zone.extras.id ] );
-    execSync( 'docker rm -f ' + self.agents[ zone.extras.id ] );
+    self.logger.debug( 'Stopping container agent: %s', self.agents[ dataset.extras.id ] );
+    execSync( 'docker rm -f ' + self.agents[ dataset.extras.id ] );
   } else {
-    self.logger.debug( 'Stopping process agent: %s', self.agents[ zone.extras.id ] );
-    process.kill( self.agents[ zone.extras.id ], 'SIGTERM' );
+    self.logger.debug( 'Stopping process agent: %s', self.agents[ dataset.extras.id ] );
+    try {
+      process.kill( self.agents[ dataset.extras.id ], 'SIGTERM' );
+    } catch( e ) {
+      self.logger.error( e );
+    }
   }
 };
 
-// Retrive a list of all zones in play
-BudaManager.prototype._getZoneList = function( cb ) {
+// Retrive a list of all datasets
+BudaManager.prototype._getDatasetList = function( cb ) {
   var self = this;
 
-  ZoneModel.find({}, { _id: 0 }, function( err, res ) {
+  DatasetModel.find({}, { _id: 0 }, function( err, res ) {
     if( err ) {
       self.logger.error( err );
       return cb({ error: true, desc: 'INTERNAL_ERROR' });
@@ -369,19 +373,19 @@ BudaManager.prototype._getZoneList = function( cb ) {
   });
 };
 
-// Retrieve details of a specific zone
-BudaManager.prototype._getZoneDetails = function( id, cb ) {
+// Retrieve details of a specific dataset
+BudaManager.prototype._getDatasetDetails = function( id, cb ) {
   var self = this;
 
   // Retrieve element based on it's id
-  ZoneModel.find({ 'extras.id': id }, { _id: 0 }, function( err, res ) {
+  DatasetModel.find({ 'extras.id': id }, { _id: 0 }, function( err, res ) {
     if( err ) {
       self.logger.error( err );
       return cb({ error: true, desc: 'INTERNAL_ERROR' });
     }
 
     if( res.length !== 1 ) {
-      self.logger.warn( 'Invalid zone id: %s', id );
+      self.logger.warn( 'Invalid dataset id: %s', id );
       return cb({ error: true, desc: 'INVALID_ZONE_ID' });
     }
 
@@ -389,31 +393,31 @@ BudaManager.prototype._getZoneDetails = function( id, cb ) {
   });
 };
 
-// Update and existing zone
-BudaManager.prototype._updateZone = function( id, newData, cb ) {
+// Update and existing dataset
+BudaManager.prototype._updateDataset = function( id, newData, cb ) {
   var self = this;
 
-  // Delete existing zone
-  self._deleteZone( id, function( res ) {
+  // Delete existing dataset
+  self._deleteDataset( id, function( res ) {
     if( res.error ) {
       return cb({ error: true, desc: 'INTERNAL_ERROR' });
     }
 
-    // Create new zone
-    self._registerZone( newData, function( zone ) {
-      if( zone.error ) {
+    // Create new dataset
+    self._registerDataset( newData, function( dataset ) {
+      if( dataset.error ) {
         return cb({ error: true, desc: 'INTERNAL_ERROR' });
       }
-      cb( zone );
+      cb( dataset );
     });
   });
 };
 
-// Delete a running zone
-BudaManager.prototype._deleteZone = function( id, cb ) {
+// Delete an existing dataset
+BudaManager.prototype._deleteDataset = function( id, cb ) {
   var self = this;
 
-  ZoneModel.where({ 'extras.id': id }).findOneAndRemove( function( err, res ) {
+  DatasetModel.where({ 'extras.id': id }).findOneAndRemove( function( err, res ) {
     // Delete error
     if( err ) {
       self.logger.error( err );
@@ -422,64 +426,64 @@ BudaManager.prototype._deleteZone = function( id, cb ) {
 
     // Invalid ID
     if( ! res ) {
-      self.logger.warn( 'Invalid zone id: %s', id );
+      self.logger.warn( 'Invalid dataset id: %s', id );
       return cb({ error: true, desc: 'INVALID_ZONE_ID' });
     }
 
-    // Stop zone agent and return
+    // Stop dataset agent and return
     self._stopAgent( res._doc );
     return cb( res._doc );
   });
 };
 
-// Register a new zone
-BudaManager.prototype._registerZone = function( zone, cb ) {
+// Register a new dataset
+BudaManager.prototype._registerDataset = function( dataset, cb ) {
   // Validation function holder
-  var zoneValidation;
+  var validation;
   var self = this;
 
-  // Check zone details are present
-  if( ! zone ) {
+  // Check dataset details are present
+  if( ! dataset ) {
     this.logger.warn( 'Missing parameters' );
     return { error: true, desc: 'MISSING_PARAMETERS' };
   }
 
   // Not supported schema version?
-  if( ! this.schemas[ 'zone-' + zone.version ] ) {
+  if( ! this.schemas[ 'dataset-' + dataset.version ] ) {
     this.logger.error( 'Unsupported schema version' );
     return { error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' };
   }
 
-  // Validate zone against the schema version used
-  zoneValidation = jsen( JSON.parse( this.schemas[ 'zone-' + zone.version ] ) );
-  if( ! zoneValidation( zone ) ) {
-    this.logger.error({ errors: zoneValidation.errors }, 'Invalid zone definition' );
+  // Validate dataset against the schema version used
+  validation = jsen( JSON.parse( this.schemas[ 'dataset-' + dataset.version ] ) );
+  if( ! validation( dataset ) ) {
+    this.logger.error({ errors: validation.errors }, 'Invalid dataset definition' );
     return {
       error:   true,
-      desc:    'INVALID_ZONE_DEFINITION',
-      details: zoneValidation.errors
+      desc:    'INVALID_DATASET_DEFINITION',
+      details: validation.errors
     };
   }
 
   // Set dates
-  zone.metadata.issued = new Date( zone.metadata.issued || Date.now() );
-  zone.metadata.modified = new Date( zone.metadata.modified || Date.now() );
+  dataset.metadata.issued = new Date( dataset.metadata.issued || Date.now() );
+  dataset.metadata.modified = new Date( dataset.metadata.modified || Date.now() );
 
   // Calculate ID
-  zone.extras.id = getID( zone );
+  dataset.extras.id = getID( dataset );
 
-  // Start zone agent
-  this._startAgent( zone );
+  // Start dataset agent
+  this._startAgent( dataset );
 
-  // Store zone record
-  ZoneModel.collection.insert( zone, function( err ) {
+  // Store dataset record
+  DatasetModel.collection.insert( dataset, function( err ) {
     if( err ) {
       self.logger.error( err );
       return cb({ error: true, desc: 'INTERNAL_ERROR' });
     }
 
-    delete zone._id;
-    cb( zone );
+    delete dataset._id;
+    cb( dataset );
   });
 };
 
@@ -496,16 +500,16 @@ BudaManager.prototype.printHelp = function() {
 BudaManager.prototype.exit = function() {
   var self = this;
 
-  // Get existing zones
-  self._getZoneList( function( list ) {
+  // Get existing datasets
+  self._getDatasetList( function( list ) {
     // Close storage connection
     mongoose.connection.close( function() {
       // Stop running agents
       self.logger.info( 'Storage disconnected' );
       self.logger.info( 'Stopping running agents' );
       if( list.length > 0 ) {
-        _.each( list, function( zone ) {
-          self._stopAgent( zone._doc );
+        _.each( list, function( dataset ) {
+          self._stopAgent( dataset._doc );
         });
       }
       self.logger.info( 'Exiting Manager' );
@@ -532,9 +536,9 @@ BudaManager.prototype.start = function() {
   }, 'Starting with configuration' );
 
   // Storage connection
-  ZoneStorageSchema.set( 'strict', false );
-  ZoneStorageSchema.set( 'collection', 'sys.zones' );
-  ZoneModel = mongoose.model( 'Doc', ZoneStorageSchema );
+  DatasetStorageSchema.set( 'strict', false );
+  DatasetStorageSchema.set( 'collection', 'sys.datasets' );
+  DatasetModel = mongoose.model( 'Doc', DatasetStorageSchema );
   self.logger.info( 'Connecting to storage: ' + self.config.storage );
   mongoose.connect( 'mongodb://' + self.config.storage, {
     server: {
@@ -578,12 +582,12 @@ BudaManager.prototype.start = function() {
     config: self.restapi.info
   }, 'Interface started with configuration' );
 
-  // Re-start agents from any existing zones
+  // Re-start agents from any existing datasets
   self.logger.info( 'Restarting existing agents' );
-  self._getZoneList( function( list ) {
-    _.each( list, function( zone ) {
-      self.logger.info( 'Starting agent for zone: ' + zone._doc.extras.id );
-      self._startAgent( zone._doc );
+  self._getDatasetList( function( list ) {
+    _.each( list, function( dataset ) {
+      self.logger.info( 'Starting agent for dataset: ' + dataset._doc.extras.id );
+      self._startAgent( dataset._doc );
     });
   });
 

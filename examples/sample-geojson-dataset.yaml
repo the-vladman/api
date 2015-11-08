@@ -1,10 +1,10 @@
 version: '0.1'
 metadata:
-  title: XML Sample
-  description: Just a sample XML zone
+  title: GeoJSON Sample
+  description: Just a sample GeoJSON zone
   keyword:
     - sample
-    - xml
+    - geojson
     - zone
   language:
     - es-MX
@@ -14,23 +14,23 @@ metadata:
   contactEmail: hola@datos.gob.mx
   accessLevel: public
 data:
-  format: xml
+  format: geojson
+  compression: none
   storage:
     type: mongodb
     host: localhost:27017
     db: buda
-    collection: calidadAire
+    collection: callesVeracruz
     index: _id
   hotspot:
     type: tcp
     location: ''
   options:
-    pointer: station
-    normalize: true
-    trim: true
-    lowercase: true
+    pointer: features.*
+    removeAltitude: true
+    removeDuplicatePoints: true
 extras:
   docker:
-    image: mxabierto/buda-agent-xml
+    image: mxabierto/buda-agent-geojson
     links:
       - buda-storage:storage

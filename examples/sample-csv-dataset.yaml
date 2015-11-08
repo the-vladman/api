@@ -15,6 +15,7 @@ metadata:
   accessLevel: public
 data:
   format: csv
+  compression: none
   storage:
     type: mongodb
     host: localhost:27017

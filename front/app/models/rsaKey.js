@@ -1,3 +1,6 @@
+// Enable strict syntax mode
+'use strict';
+
 // Dependencies
 var mongoose = require( 'mongoose' );
 var Schema = mongoose.Schema;

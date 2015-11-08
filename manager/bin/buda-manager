@@ -21,7 +21,7 @@ _.each( config, function( val, key ) {
     config[ key ] = process.env[ 'BUDA_MANAGER_' + key.toUpperCase() ];
   }
 });
-config = minimist( process.argv.slice( 2 ), { 'default': config });
+config = minimist( process.argv.slice( 2 ), { default: config });
 delete config._;
 
 // Create and start manager instance

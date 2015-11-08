@@ -22,8 +22,8 @@ var mongoose = require( 'mongoose' );
 var events = require( 'events' );
 
 // Constructor
-// Configuration parameters expected should match the 'zone.data' attribute
-// according to the supported zone schema version
+// Configuration parameters expected should match the 'dataset.data' attribute
+// according to the supported dataset schema version
 function BudaAgent( conf ) {
   // Process each data packet received
   this.parser = null;
@@ -78,6 +78,9 @@ BudaAgent.prototype.start = function() {
 
   // Connect to data storage
   this.connectStorage();
+
+  // Additional parser setup
+  this.parserSetup();
 
   // Create server
   this.incoming = net.createServer( _.bind( function( socket ) {
@@ -150,6 +153,29 @@ BudaAgent.prototype.connectStorage = function() {
   storage += '/' + this.config.storage.db;
   mongoose.connect( 'mongodb://' + storage );
   return;
+};
+
+// Additional parser setup
+BudaAgent.prototype.parserSetup = function() {
+  var self = this;
+  var finalPass = false;
+
+  // Since we're using "end:false" as piping option some parsers
+  // don't emit the 'end' event and some entries are not being stored;
+  // using a timer we manually emit the event once per data batch
+  self.parser.on( 'hit', function() {
+    // Clear previous timer if any
+    if( finalPass ) {
+      clearTimeout( finalPass );
+    }
+
+    // Setup final pass timer
+    finalPass = setTimeout( function() {
+      self.parser.emit( 'end' );
+    }, 2000 );
+  });
+
+  return true;
 };
 
 // Logs are sent directly to stdout as JSON message; if a string is used

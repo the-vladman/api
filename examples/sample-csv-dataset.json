@@ -1,9 +1,9 @@
 {
   "version": "0.1",
   "metadata": {
-    "title": "JSONL Sample",
-    "description": "Just a sample JSONL zone",
-    "keyword": ["sample", "jsonl", "zone"],
+    "title": "CSV Sample",
+    "description": "Just a sample CSV zone",
+    "keyword": ["sample", "csv", "zone"],
     "language": ["es-MX"],
     "license": "http://datos.gob.mx/libreusomx/",
     "organization": "México Abierto",
@@ -12,24 +12,28 @@
     "accessLevel": "public"
   },
   "data": {
-    "format": "jsonl",
+    "format": "csv",
+    "compression": "none",
     "storage": {
       "type": "mongodb",
       "host": "localhost:27017",
       "db": "buda",
-      "collection": "lines",
-      "index": "_id"
+      "collection": "codigosPostales",
+      "index": "d_codigo"
     },
     "hotspot": {
       "type": "tcp",
       "location": ""
     },
     "options": {
+      "separator": ",",
+      "escapeChar":   "\"",
+      "enclosedChar": "\""
     }
   },
   "extras": {
     "docker": {
-      "image": "mxabierto/buda-agent-jsonl",
+      "image": "mxabierto/buda-agent-csv",
       "links": [
         "buda-storage:storage"
       ]

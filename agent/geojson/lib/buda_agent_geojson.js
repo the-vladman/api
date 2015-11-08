@@ -123,6 +123,7 @@ function BudaGeoJSONAgent( conf ) {
               throw err;
             }
           });
+          self.parser.emit( 'hit' );
           bag = [];
         }
       } else {

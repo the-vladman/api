@@ -1,7 +1,7 @@
 {
-  "id": "http://api.datos.gob.mx/v1/schemas/zone.json",
+  "id": "http://api.datos.gob.mx/v1/schemas/dataset.json",
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Schema for the definitions of data zones handled by the BUDA platform",
+  "description": "Schema for the definition of datasets handled by the BUDA platform",
   "definitions": {
     "hotspot": {
       "type": "object",

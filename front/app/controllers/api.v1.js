@@ -29,34 +29,34 @@ module.exports = function( options ) {
   var logger = options.logger;
   var config = options.config;
 
-  // Helper method to format a give zone metadata for display
-  function _zoneToDCAT( zone ) {
+  // Helper method to format a given dataset metadata for display
+  function _toDCAT( dataset ) {
     var entry = {};
 
     entry[ '@type' ] = 'dcat:Dataset';
-    entry.title = zone.metadata.title;
-    entry.description = zone.metadata.description;
-    entry.identifier = zone.data.storage.collection;
-    entry.keyword = zone.metadata.keyword;
-    entry.issued = zone.metadata.issued;
-    entry.modified = zone.metadata.modified;
-    entry.accessLevel = zone.metadata.accessLevel;
-    entry.language = zone.metadata.language;
-    entry.license = zone.metadata.license;
+    entry.title = dataset.metadata.title;
+    entry.description = dataset.metadata.description;
+    entry.identifier = dataset.data.storage.collection;
+    entry.keyword = dataset.metadata.keyword;
+    entry.issued = dataset.metadata.issued;
+    entry.modified = dataset.metadata.modified;
+    entry.accessLevel = dataset.metadata.accessLevel;
+    entry.language = dataset.metadata.language;
+    entry.license = dataset.metadata.license;
     entry.publisher = {
       '@type': 'org:Organization',
-      name:    zone.metadata.organization
+      'name':  dataset.metadata.organization
     };
     entry.contactPoint = {
-      '@type':  'vcard:Contact',
-      fn:       zone.metadata.contactName,
-      hasEmail: zone.metadata.contactEmail
+      '@type':    'vcard:Contact',
+      'fn':       dataset.metadata.contactName,
+      'hasEmail': dataset.metadata.contactEmail
     };
     entry.distribution = [];
     entry.distribution.push({
-      '@type':   'dcat:Distribution',
-      mediaType: 'application/json',
-      accessURL: '/v1/' + zone.data.storage.collection
+      '@type':     'dcat:Distribution',
+      'mediaType': 'application/json',
+      'accessURL': '/v1/' + dataset.data.storage.collection
     });
     return entry;
   }
@@ -326,7 +326,7 @@ module.exports = function( options ) {
 
     // Retrieve metadata of the existing catalog
     catalogInfo: function( req, res, next ) {
-      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, 'sys.zones' );
+      var DataObject = mongoose.model( 'DataObject', DataObjectSchema, 'sys.datasets' );
       var queryString = req.query;
       var page = queryString.page || 1;
       var pageSize = queryString.pageSize || 100;
@@ -334,13 +334,14 @@ module.exports = function( options ) {
 
       // Metadata holder structure
       var metadata = {
-        '@type':     'dcat:Catalog',
-        title:       config.title,
-        description: config.desc,
-        dataset:     []
+        '@type':       'dcat:Catalog',
+        'title':       config.title,
+        'description': config.desc,
+        'dataset':     []
       };
 
       // Count results
+      logger.info( 'Retrieve catalog metadata' );
       DataObject.find().count( function( err, total ) {
         if( err ) {
           return next( err );
@@ -358,8 +359,8 @@ module.exports = function( options ) {
           }
 
           // Format results
-          _.each( docs, function( zone ) {
-            metadata.dataset.push( _zoneToDCAT( zone._doc ) );
+          _.each( docs, function( dataset ) {
+            metadata.dataset.push( _toDCAT( dataset._doc ) );
           });
 
           // Return

@@ -49,6 +49,7 @@ function BudaJSONAgent( conf ) {
           throw err;
         }
       });
+      self.parser.emit( 'hit' );
       bag = [];
     }
   });

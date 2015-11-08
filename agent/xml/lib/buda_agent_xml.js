@@ -79,9 +79,13 @@ BudaXMLAgent.prototype.start = function() {
             throw err;
           }
         });
+        self.parser.emit( 'hit' );
         bag = [];
       }
     });
+
+    // Run common additional parser setup
+    BudaXMLAgent.super_.prototype.parserSetup.apply( self );
   }, this ) );
 
   // Start listening for data
