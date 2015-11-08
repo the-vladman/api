@@ -10,6 +10,8 @@ RestartSec=5
 TimeoutStartSec=0
 KillMode=none
 
+ExecStartPre=/bin/sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+ExecStartPre=/bin/sh -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
 ExecStartPre=-/usr/bin/docker kill buda-storage
 ExecStartPre=-/usr/bin/docker rm buda-storage
 ExecStartPre=-/usr/bin/docker pull mxabierto/mongodb-rocks
