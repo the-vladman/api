@@ -316,7 +316,7 @@ BudaManager.prototype._startAgent = function( dataset ) {
   }
 
   // Sub-process setup
-  cmd = 'buda-agent-' + dataset.data.format;
+  cmd = dataset.extras.handler || 'buda-agent-' + dataset.data.format;
   if( dataset.extras.handler ) {
     cmd = dataset.extras.handler;
   }
