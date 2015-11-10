@@ -1,36 +1,42 @@
 {
   "version": "0.1",
   "metadata": {
-    "name": "CompraNet",
+    "title": "CompraNet",
     "description": "Datos relevantes de los contratos derivados de los procedimientos de contratación reportados en CompraNet",
-    "author": "Eduardo Clark",
-    "organization": "SFP",
-    "website": "https://compranet.funcionpublica.gob.mx",
-    "email": "contacto@datos.gob.mx",
-    "phone": ""
+    "keyword": ["contratos", "gobierno", "compranet", "proveedores"],
+    "language": ["es-MX"],
+    "license": "http://datos.gob.mx/libreusomx/",
+    "organization": "México Abierto",
+    "contactName": "Eduardo Clark",
+    "contactEmail": "hola@datos.gob.mx",
+    "accessLevel": "public"
   },
   "data": {
-    "type": "csv",
-    "options": {
-      "separator": ","
-    }
-  },
-  "storage": {
-    "type": "mongodb",
-    "options": {
+    "format": "csv",
+    "compression": "none",
+    "storage": {
+      "type": "mongodb",
+      "host": "localhost:27017",
+      "db": "buda",
       "collection": "compranet",
       "index": "CODIGO_CONTRATO"
+    },
+    "hotspot": {
+      "type": "tcp",
+      "location": ""
+    },
+    "options": {
+      "separator": ",",
+      "escapeChar":   "\"",
+      "enclosedChar": "\""
     }
-  },
-  "errors": {
-    "type": "stdout"
-  },
-  "hotspot": {
-    "type": "tcp"
   },
   "extras": {
     "docker": {
-      "image": "mxabierto/buda-agent-csv"
+      "image": "mxabierto/buda-agent-csv",
+      "links": [
+        "buda-storage:storage"
+      ]
     }
   }
 }

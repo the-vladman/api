@@ -1,43 +1,38 @@
-{
-  "version": "0.1",
-  "metadata": {
-    "title": "Calidad del Aire",
-    "description": "Procesa feeds con las capturas de estaciones en indice de calidad del aire",
-    "keyword": ["calidad", "aire", "air", "quality"],
-    "language": ["es-MX"],
-    "license": "http://datos.gob.mx/libreusomx/",
-    "organization": "México Abierto",
-    "contactName": "Eduardo Clark",
-    "contactEmail": "hola@datos.gob.mx",
-    "accessLevel": "public"
-  },
-  "data": {
-    "format": "csv",
-    "compression": "none",
-    "storage": {
-      "type": "mongodb",
-      "host": "localhost:27017",
-      "db": "buda",
-      "collection": "calidadAire",
-      "index": "station.id"
-    },
-    "hotspot": {
-      "type": "tcp",
-      "location": ""
-    },
-    "options": {
-      "separator": ",",
-      "escapeChar":   "\"",
-      "enclosedChar": "\""
-    }
-  },
-  "extras": {
-    "handler": "airquality",
-    "docker": {
-      "image": "mxabierto/buda-agent-airquality",
-      "links": [
-        "buda-storage:storage"
-      ]
-    }
-  }
-}
+version: 0.1
+metadata:
+  title: Calidad del Aire
+  description: Procesa feeds con las capturas de estaciones en indice de calidad del aire
+  keyword:
+    - calidad
+    - aire
+    - air
+    - quality
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Eduardo Clark
+  contactEmail: hola@datos.gob.mx
+  accessLevel: public
+data:
+  format: csv
+  compression: none
+  storage:
+    type: mongodb
+    host: localhost:27017
+    db: buda
+    collection: calidadAire
+    index: station.id
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+    separator: ','
+    escapeChar: '"'
+    enclosedChar: '"'
+extras:
+  handler: airquality
+  docker:
+    image: mxabierto/buda-agent-airquality
+    links:
+      - buda-storage:storage

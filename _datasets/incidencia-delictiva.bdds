@@ -1,36 +1,42 @@
 {
   "version": "0.1",
   "metadata": {
-    "name": "Incidencia Delictiva",
+    "title": "Incidencia Delictiva",
     "description": "Registros de Incidencia Delictiva Nacional",
-    "author": "Eduardo Clark",
-    "organization": "Red México Abierto",
-    "website": "datos.gob.mx",
-    "email": "contacto@datos.gob.mx",
-    "phone": ""
+    "keyword": ["incidencia", "delictiva", "seguridad"],
+    "language": ["es-MX"],
+    "license": "http://datos.gob.mx/libreusomx/",
+    "organization": "México Abierto",
+    "contactName": "Eduardo Clark",
+    "contactEmail": "hola@datos.gob.mx",
+    "accessLevel": "public"
   },
   "data": {
-    "type": "csv",
-    "options": {
-      "separator": ","
-    }
-  },
-  "storage": {
-    "type": "mongodb",
-    "options": {
+    "format": "csv",
+    "compression": "none",
+    "storage": {
+      "type": "mongodb",
+      "host": "localhost:27017",
+      "db": "buda",
       "collection": "incidenciaDelictiva",
       "index": "cve_inegi"
+    },
+    "hotspot": {
+      "type": "tcp",
+      "location": ""
+    },
+    "options": {
+      "separator": ",",
+      "escapeChar":   "\"",
+      "enclosedChar": "\""
     }
-  },
-  "errors": {
-    "type": "stdout"
-  },
-  "hotspot": {
-    "type": "tcp"
   },
   "extras": {
     "docker": {
-      "image": "mxabierto/buda-agent-csv"
+      "image": "mxabierto/buda-agent-csv",
+      "links": [
+        "buda-storage:storage"
+      ]
     }
   }
 }
