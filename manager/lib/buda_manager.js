@@ -458,11 +458,11 @@ BudaManager.prototype._registerDataset = function( dataset, cb ) {
   validation = jsen( JSON.parse( this.schemas[ 'dataset-' + dataset.version ] ) );
   if( ! validation( dataset ) ) {
     this.logger.error({ errors: validation.errors }, 'Invalid dataset definition' );
-    return {
+    return cb({
       error:   true,
       desc:    'INVALID_DATASET_DEFINITION',
       details: validation.errors
-    };
+    });
   }
 
   // Set dates
