@@ -393,6 +393,8 @@ module.exports = function( options ) {
       // Validate collection
       if( collection.substr( 0, 4 ) === 'sys.' ||
           collection.substr( 0, 7 ) === 'system.' ) {
+        logger.info( 'Restricted query' );
+        logger.debug({ collection: collection }, 'Restricted query' );
         error = new Error( 'RESTRICTED_DATA_COLLECTION' );
         error.status = 400;
         return next( error );

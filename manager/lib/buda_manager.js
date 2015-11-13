@@ -90,7 +90,7 @@ function BudaManager( params ) {
 //   child processes
 // - range: Inclusive range of TCP ports to use for agents
 BudaManager.DEFAULTS = {
-  home:    '/var/run/buda',
+  home:    '/var/run',
   port:    8100,
   docker:  false,
   range:   '2810-2890',
