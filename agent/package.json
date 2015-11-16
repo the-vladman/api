@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "minimist": "=1.2.0",
-    "mongoose": "=4.1.11",
+    "mongoose": "=4.2.5",
     "underscore": "=1.8.3",
     "byline": "=4.2.1"
   }

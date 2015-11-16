@@ -21,10 +21,10 @@ ADD . /root/buda-agent-json
 RUN \
   apk-install g++ make python && \
   # Install base modules
-  npm install && \
+  npm install --no-optional && \
   # Install agent-specific modules
   cd json && \
-  npm install && \
+  npm install --no-optional && \
   # Cleanup
   apk del g++ make python
 

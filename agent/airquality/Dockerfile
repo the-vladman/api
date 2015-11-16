@@ -21,10 +21,10 @@ ADD . /root/buda-agent-airquality
 RUN \
   apk-install g++ make python && \
   # Install base modules
-  npm install && \
+  npm install --no-optional && \
   # Install agent-specific modules
   cd csv && \
-  npm install && \
+  npm install --no-optional && \
   # Cleanup
   apk del g++ make python
 

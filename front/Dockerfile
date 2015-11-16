@@ -21,7 +21,7 @@ ADD . /root/buda-front
 # but after modules compile are no longer required
 RUN \
   apk-install g++ make python && \
-  npm install && \
+  npm install --no-optional && \
   apk del g++ make python
 
 # Expose default connection port

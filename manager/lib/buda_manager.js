@@ -72,7 +72,6 @@ function BudaManager( params ) {
 
   // API interface
   this.restapi = new Hapi.Server({
-    minimal: true,
     load:    {
       sampleInterval: 5000
     }
@@ -263,7 +262,12 @@ BudaManager.prototype._startInterface = function() {
   ] );
 
   // Open connections
-  this.restapi.start();
+  this.restapi.start( function( err ) {
+    if( err ) {
+      self.logger.fatal( err );
+      throw err;
+    }
+  });
 };
 
 // Starts a new dataset agent
@@ -580,13 +584,6 @@ BudaManager.prototype.start = function() {
   self.logger.info( 'Moving process to working directory' );
   process.chdir( self.config.home );
 
-  // Start REST interface
-  self.logger.info( 'Starting REST interface' );
-  self._startInterface();
-  self.logger.debug({
-    config: self.restapi.info
-  }, 'Interface started with configuration' );
-
   // Re-start agents from any existing datasets
   self.logger.info( 'Restarting existing agents' );
   self._getDatasetList( function( list ) {
@@ -595,6 +592,13 @@ BudaManager.prototype.start = function() {
       self._startAgent( dataset._doc );
     });
   });
+
+  // Start REST interface
+  self.logger.info( 'Starting REST interface' );
+  self._startInterface();
+  self.logger.debug({
+    config: self.restapi.info
+  }, 'Interface started with configuration' );
 
   // Log final output
   self.logger.info( 'Initialization process complete' );
