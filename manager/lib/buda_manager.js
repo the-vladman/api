@@ -275,6 +275,11 @@ BudaManager.prototype._startAgent = function( dataset ) {
   var agent;
   var portsRange;
 
+  // Use manager storage as the agent's if no host is specified
+  if( ! _.has( dataset.data.storage, 'host' ) ) {
+    dataset.data.storage.host = this.config.storage;
+  }
+
   // Start agent as a container if running in 'docker' mode
   if( self.config.docker ) {
     // Set default port to the one exposed on the docker image; it will

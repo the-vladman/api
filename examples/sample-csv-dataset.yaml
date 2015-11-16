@@ -17,9 +17,6 @@ data:
   format: csv
   compression: none
   storage:
-    type: mongodb
-    host: localhost:27017
-    db: buda
     collection: codigosPostales
     index: d_codigo
   hotspot:

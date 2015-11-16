@@ -133,24 +133,14 @@ BudaAgent.prototype.transform = function( record ) {
 
 // Stablish a connection with the used data storage
 BudaAgent.prototype.connectStorage = function() {
-  var storage = null;
-
-  // Connect to DB
-  // The storage host will be collected from ENV and override as config parameter
-  if( process.env.STORAGE_PORT ) {
-    storage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
-  }
-  if( this.config.storage.host ) {
-    storage = this.config.storage.host;
-  }
+  var storage = this.config.storage.host;
 
   // No storage located? exit with error
   if( ! storage ) {
     throw new Error( 'No storage available' );
   }
 
-  // Append selected DB and connect
-  storage += '/' + this.config.storage.db;
+  // Append selected DB if required and connect
   mongoose.connect( 'mongodb://' + storage );
   return;
 };

@@ -16,9 +16,6 @@ data:
   format: csv
   compression: none
   storage:
-    type: mongodb
-    host: localhost:27017
-    db: buda
     collection: gobmx.data
     index: dep
   hotspot:

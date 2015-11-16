@@ -15,9 +15,6 @@
     "format": "jsonl",
     "compression": "none",
     "storage": {
-      "type": "mongodb",
-      "host": "localhost:27017",
-      "db": "buda",
       "collection": "lines",
       "index": "_id"
     },

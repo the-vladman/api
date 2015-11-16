@@ -31,30 +31,10 @@
       "title": "Storage",
       "description": "Provides all the information required to store the data processed in a desired location",
       "required": [
-        "type",
-        "host",
-        "db",
         "collection",
         "index"
       ],
       "properties": {
-        "type": {
-          "type": "string",
-          "title": "Type",
-          "description": "Storage system used",
-          "default": "mongodb",
-          "enum": [ "mongodb" ]
-        },
-        "host": {
-          "type": "string",
-          "title": "Host",
-          "description": "Connection string that the agent will use as-is to locate and use the storage system in use"
-        },
-        "db": {
-          "type": "string",
-          "title": "Database",
-          "description": "Database used to store the data packets received"
-        },
         "collection": {
           "type": "string",
           "title": "Collection",

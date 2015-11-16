@@ -15,9 +15,6 @@
     "format": "geojson",
     "compression": "none",
     "storage": {
-      "type": "mongodb",
-      "host": "localhost:27017",
-      "db": "buda",
       "collection": "callesVeracruz",
       "index": "_id"
     },

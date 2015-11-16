@@ -15,9 +15,6 @@
     "format": "csv",
     "compression": "none",
     "storage": {
-      "type": "mongodb",
-      "host": "localhost:27017",
-      "db": "buda",
       "collection": "ods.codigosGrupos",
       "index": "id"
     },
