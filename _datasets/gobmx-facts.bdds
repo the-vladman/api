@@ -17,7 +17,7 @@ data:
   compression: none
   storage:
     collection: gobmx.facts
-    index: dep
+    index: slug
   hotspot:
     type: tcp
     location: ''
