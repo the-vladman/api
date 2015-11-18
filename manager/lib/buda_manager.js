@@ -37,7 +37,7 @@ var DatasetModel;
 
 // Utility method to calculate a dataset ID
 function getID( dataset ) {
-  var shasum = crypto.createHash( 'sha1' );
+  var shasum = crypto.createHash( 'sha256' );
   var digest = '|';
 
   digest += dataset.version + '|';
@@ -72,7 +72,7 @@ function BudaManager( params ) {
 
   // API interface
   this.restapi = new Hapi.Server({
-    load:    {
+    load: {
       sampleInterval: 5000
     }
   });
