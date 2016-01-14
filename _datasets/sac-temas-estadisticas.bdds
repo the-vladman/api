@@ -1,0 +1,35 @@
+version: '0.1'
+metadata:
+  title: Tramites
+  description: Estadísticas de búsquedas en http://www.gob.mx/tramites
+  keyword:
+    - números
+    - sac
+    - estadísticas
+    - temas
+    - atención ciudadana
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Jorge Martínez Ortega
+  contactEmail: hola@datos.gob.mx
+  accessLevel: public
+data:
+  format: csv
+  compression: none
+  storage:
+    collection: sac.temas.estadisticas
+    index: _id
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+    separator: ','
+    escapeChar: '\"'
+    enclosedChar: '\"'
+extras:
+  docker:
+    image: mxabierto/buda-agent-csv
+    links:
+      - buda-storage:storage
