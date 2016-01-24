@@ -71,17 +71,13 @@ function BudaGeoJSONAgent( conf ) {
 
   // Parser errors
   this.parser.on( 'error', function( err ) {
-    throw err;
+    self.emit( 'error', err );
   });
 
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.model.collection.insert( bag, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
+      self.emit( 'record', bag );
       bag = [];
     }
     self.log( 'Processing done!' );
@@ -118,16 +114,12 @@ function BudaGeoJSONAgent( conf ) {
         }
         bag.push( item );
         if( bag.length === ( self.config.storage.batch || 20 ) ) {
-          self.model.collection.insert( bag, function( err ) {
-            if( err ) {
-              throw err;
-            }
-          });
-          self.parser.emit( 'hit' );
+          self.emit( 'record', bag );
           bag = [];
         }
       } else {
-        self.log( 'Invalid GeoJSON feature' );
+        // Attach obj information
+        self.emit( 'error', new Error( 'Invalid GeoJSON feature' ) );
       }
     });
   });

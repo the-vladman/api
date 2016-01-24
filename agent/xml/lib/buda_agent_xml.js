@@ -5,7 +5,6 @@
 var BudaAgent = require( '../../buda_agent' );
 
 // Custom requirements
-var _ = require( 'underscore' );
 var util = require( 'util' );
 var net = require( 'net' );
 var info = require( '../package' );
@@ -40,7 +39,7 @@ BudaXMLAgent.prototype.start = function() {
   BudaXMLAgent.super_.prototype.connectStorage.apply( this );
 
   // Create server
-  self.incoming = net.createServer( _.bind( function( socket ) {
+  self.incoming = net.createServer( function( socket ) {
     // Set up parser
     if( self.config.compression !== 'none' ) {
       throw new Error( 'GZIP functionality not ready!' );
@@ -51,19 +50,25 @@ BudaXMLAgent.prototype.start = function() {
       self.parser = xmlflow( socket, self.config.options );
     }
 
+    // Store records
+    self.on( 'record', function( data ) {
+      // Store bag of records
+      self.model.collection.insert( data, function( err ) {
+        if( err ) {
+          throw err;
+        }
+      });
+    });
+
     // Parser errors
     self.parser.on( 'error', function( err ) {
-      throw err;
+      self.emit( 'error', err );
     });
 
     // Rewind on complete
     self.parser.on( 'end', function() {
       if( bag.length > 0 ) {
-        self.model.collection.insert( bag, function( err ) {
-          if( err ) {
-            throw err;
-          }
-        });
+        self.emit( 'record', bag );
         bag = [];
       }
       self.log( 'Processing done!' );
@@ -74,19 +79,11 @@ BudaXMLAgent.prototype.start = function() {
       // Cleanup items
       bag.push( self.transform( self.cleanItem( item ) ) );
       if( bag.length === ( self.config.storage.batch || 50 ) ) {
-        self.model.collection.insert( bag, function( err ) {
-          if( err ) {
-            throw err;
-          }
-        });
-        self.parser.emit( 'hit' );
+        self.emit( 'record', bag );
         bag = [];
       }
     });
-
-    // Run common additional parser setup
-    BudaXMLAgent.super_.prototype.parserSetup.apply( self );
-  }, this ) );
+  });
 
   // Start listening for data
   this.incoming.listen( this.endpoint, function() {

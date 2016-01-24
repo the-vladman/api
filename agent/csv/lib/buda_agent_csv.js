@@ -22,14 +22,15 @@ function BudaCSVAgent( conf ) {
   // Configure data parser
   this.parser = CSV.createStream( this.config.options || {});
 
+  // Errors
+  this.parser.on( 'error', function( err ) {
+    self.emit( 'error', err );
+  });
+
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.model.collection.insert( bag, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
+      self.emit( 'record', bag );
       bag = [];
     }
     self.log( 'Processing done!' );
@@ -39,19 +40,9 @@ function BudaCSVAgent( conf ) {
   this.parser.on( 'data', function( item ) {
     bag.push( self.transform( item ) );
     if( bag.length === ( self.config.storage.batch || 50 ) ) {
-      self.model.collection.insert( bag, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
-      self.parser.emit( 'hit' );
+      self.emit( 'record', bag );
       bag = [];
     }
-  });
-
-  // Log errors
-  this.parser.on( 'error', function( err ) {
-    throw err;
   });
 }
 util.inherits( BudaCSVAgent, BudaAgent );

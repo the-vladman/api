@@ -71,6 +71,9 @@ util.inherits( BudaAgent, events.EventEmitter );
 // cat datafile | nc localhost PORT
 // cat datafile | nc -U file.sock
 BudaAgent.prototype.start = function() {
+  var self = this;
+  var finalPass = false;
+
   // Check a valid parser is set
   if( ! this.parser ) {
     throw new Error( 'No parser set for the agent' );
@@ -79,24 +82,50 @@ BudaAgent.prototype.start = function() {
   // Connect to data storage
   this.connectStorage();
 
-  // Additional parser setup
-  this.parserSetup();
+  // Store records setup
+  // Since we're using "end:false" as piping option some parsers
+  // don't emit the 'end' event and some entries are not being stored;
+  // using a timer we manually emit the event once per data upload
+  self.on( 'record', function( bag ) {
+    // Clear previous timer if any
+    if( finalPass ) {
+      clearTimeout( finalPass );
+    }
+
+    // Setup final pass timer
+    finalPass = setTimeout( function() {
+      self.parser.emit( 'end' );
+      clearTimeout( finalPass );
+    }, 2000 );
+
+    // Store bag of records
+    self.model.collection.insert( bag, function( err ) {
+      if( err ) {
+        throw err;
+      }
+    });
+  });
+
+  // Handle errors
+  self.on( 'error', function( err ) {
+    throw err;
+  });
 
   // Create server
-  this.incoming = net.createServer( _.bind( function( socket ) {
-    if( this.config.compression !== 'none' ) {
+  self.incoming = net.createServer( function( socket ) {
+    if( self.config.compression !== 'none' ) {
       socket
-        .pipe( this.decrompressor, { end: false })
-        .pipe( this.parser, { end: false });
+        .pipe( self.decrompressor, { end: false })
+        .pipe( self.parser, { end: false });
     } else {
-      socket.pipe( this.parser, { end: false });
+      socket.pipe( self.parser, { end: false });
     }
-  }, this ) );
+  });
 
   // Start listening for data
-  this.incoming.listen( this.endpoint, _.bind( function() {
-    this.log( 'Agent ready' );
-  }, this ) );
+  self.incoming.listen( self.endpoint, function() {
+    self.log( 'Agent ready' );
+  });
 };
 
 // Gracefull shutdown process
@@ -143,29 +172,6 @@ BudaAgent.prototype.connectStorage = function() {
   // Append selected DB if required and connect
   mongoose.connect( 'mongodb://' + storage );
   return;
-};
-
-// Additional parser setup
-BudaAgent.prototype.parserSetup = function() {
-  var self = this;
-  var finalPass = false;
-
-  // Since we're using "end:false" as piping option some parsers
-  // don't emit the 'end' event and some entries are not being stored;
-  // using a timer we manually emit the event once per data batch
-  self.parser.on( 'hit', function() {
-    // Clear previous timer if any
-    if( finalPass ) {
-      clearTimeout( finalPass );
-    }
-
-    // Setup final pass timer
-    finalPass = setTimeout( function() {
-      self.parser.emit( 'end' );
-    }, 2000 );
-  });
-
-  return true;
 };
 
 // Logs are sent directly to stdout as JSON message; if a string is used

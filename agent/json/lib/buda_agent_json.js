@@ -24,17 +24,13 @@ function BudaJSONAgent( conf ) {
 
   // Parser errors
   self.parser.on( 'error', function( err ) {
-    throw err;
+    self.emit( 'error', err );
   });
 
   // Rewind on complete
   self.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.model.collection.insert( bag, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
+      self.emit( 'record', bag );
       bag = [];
     }
     self.log( 'Processing done!' );
@@ -44,12 +40,7 @@ function BudaJSONAgent( conf ) {
   self.parser.on( 'data', function( item ) {
     bag.push( item );
     if( bag.length === ( self.config.storage.batch || 50 ) ) {
-      self.model.collection.insert( bag, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
-      self.parser.emit( 'hit' );
+      self.emit( 'record', bag );
       bag = [];
     }
   });
