@@ -1,0 +1,30 @@
+version: '0.1'
+metadata:
+  title: Datos Abiertos
+  description: Estadísticas de datos.gob.mx
+  keyword:
+    - numeros
+    - dgm
+    - estadisticas
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Carlos Maya
+  contactEmail: hola@datos.gob.mx
+  accessLevel: public
+data:
+  format: jsonl
+  compression: none
+  storage:
+    collection: dgm.estadisticas
+    index: _id
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+extras:
+  docker:
+    image: mxabierto/buda-agent-jsonl
+    links:
+      - buda-storage:storage
