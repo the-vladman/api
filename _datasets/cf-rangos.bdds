@@ -1,0 +1,33 @@
+version: '0.1'
+metadata:
+  title: CF Rangos
+  description: CF Rangos
+  keyword:
+    - crowdfunding
+    - rangos
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Eduardo Clark
+  contactEmail: hola@datos.gob.mx
+  accessLevel: public
+data:
+  format: csv
+  compression: none
+  storage:
+    batch: 1
+    collection: cf.rangos
+    index: id
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+    separator: ','
+    escapeChar: '"'
+    enclosedChar: '"'
+extras:
+  docker:
+    image: mxabierto/buda-agent-csv
+    links:
+      - buda-storage:storage
