@@ -54,8 +54,8 @@ function _findSourceID( station ) {
   };
 
   /* eslint space-unary-ops:0 */
-  _.each( list, function( k ) {
-    if( _.indexOf( list[ k ], station ) > -1 ) {
+  _.each( list, function( v, k ) {
+    if( _.indexOf( v, station ) > -1 ) {
       res = k;
     }
   });
