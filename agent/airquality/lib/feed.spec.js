@@ -4,10 +4,11 @@
 // Measurement definition
 var Measurement = function() {
   return {
-    pollutant: '',
-    unit:      '',
-    value:     '',
-    time:      ''
+    pollutant:           '',
+    unit:                '',
+    value:               '',
+    time:                '',
+    averagedOverInHours: ''
   };
 };
 
@@ -22,11 +23,13 @@ var Index = function() {
 };
 
 // Station definition
+/* eslint camelcase:0 */
 var Station = function() {
   return {
-    id:       '',
-    name:     '',
-    location: {
+    id:        '',
+    name:      '',
+    source_id: '',
+    location:  {
       lat: '',
       lon: '',
       alt: ''
@@ -41,7 +44,7 @@ var FeedEntry = function() {
   return { stations: [ new Station() ] };
 };
 
-module.exports.version = 'v0.9';
+module.exports.version = 'v0.91';
 module.exports.Measurement = Measurement;
 module.exports.Index = Index;
 module.exports.Station = Station;
