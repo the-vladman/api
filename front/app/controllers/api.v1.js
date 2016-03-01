@@ -405,8 +405,8 @@ module.exports = function( options ) {
 
       // Pagination variables
       queryString = req.query;
-      page = queryString.page || 1;
-      pageSize = queryString.pageSize || 100;
+      page = parseInt( queryString.page, 10 ) || 1;
+      pageSize = parseInt( queryString.pageSize, 10 ) || 100;
       delete queryString.page;
       delete queryString.pageSize;
 

@@ -67,7 +67,7 @@ function _findSourceID( station ) {
 AirQualityAgent.prototype.transform = function( record ) {
   var m;
   var doc = new FeedSpec.FeedEntry();
-  var date = new Date( record.fecha + ' ' + record.hora.split( '.' )[ 0 ] );
+  var date = new Date( record.fecha + ' ' + record.hora );
 
   /* eslint camelcase:0 */
   doc.stations[ 0 ].id = record.cve;
