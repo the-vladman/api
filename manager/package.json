@@ -9,14 +9,14 @@
     "url": "https://github.com/mxabierto/buda.git"
   },
   "dependencies": {
-    "bunyan": "=1.5.1",
+    "bunyan": "=1.7.0",
     "colors": "=1.1.2",
-    "hapi": "=11.1.1",
+    "hapi": "=13.0.0",
     "jsen": "=0.6.0",
     "minimist": "=1.2.0",
-    "mongoose": "=4.2.5",
+    "mongoose": "=4.4.5",
     "underscore": "=1.8.3",
-    "yamljs": "=0.2.4"
+    "yamljs": "=0.2.5"
   },
   "bin": {
     "buda-manager": "./bin/buda-manager"

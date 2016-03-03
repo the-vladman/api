@@ -34,4 +34,6 @@ delete config._;
 
 // Create and start manager instance
 manager = new BudaManager( config );
-manager.start();
+manager.on( 'exit', function() {
+  process.exit();
+}).start();

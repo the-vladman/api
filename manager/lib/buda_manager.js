@@ -1,4 +1,4 @@
-/* eslint no-sync:0, no-process-exit:0 */
+/* eslint no-sync:0 */
 // Buda Manager
 // ============
 // Handle a graph of subprocesses for data manipulation on
@@ -19,6 +19,8 @@
 // Load required modules
 var _ = require( 'underscore' );
 var fs = require( 'fs' );
+var events = require( 'events' );
+var util = require( 'util' );
 var path = require( 'path' );
 var Hapi = require( 'hapi' );
 var crypto = require( 'crypto' );
@@ -36,7 +38,7 @@ var DatasetStorageSchema = new mongoose.Schema({});
 var DatasetModel;
 
 // Utility method to calculate a dataset ID
-function getID( dataset ) {
+function _getID( dataset ) {
   var shasum = crypto.createHash( 'sha256' );
   var digest = '|';
 
@@ -50,6 +52,64 @@ function getID( dataset ) {
 
   shasum.update( digest );
   return shasum.digest( 'hex' );
+}
+
+// Utility method, starts dataset agent as a Docker container
+function _startContainer( dataset ) {
+  var cmd;
+  var agent;
+
+  // Set default port to the one exposed on the docker image; it will
+  // be dynamically mapped on launch
+  if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
+    dataset.data.hotspot.location = 8200;
+  }
+
+  // Create docker launch command
+  cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
+  if( dataset.extras.docker.links ) {
+    _.each( dataset.extras.docker.links, function( el ) {
+      cmd += '--link ' + el + ' ';
+    });
+  }
+  cmd += dataset.extras.docker.image + ' ';
+  cmd += "--conf '" + JSON.stringify( dataset.data ) + "'";
+
+  // Start container and use the hash returned as ID
+  agent = execSync( cmd ).toString().substr( 0, 12 );
+  return agent;
+}
+
+// Utility method, starts dataset agent as a subprocess
+function _startSubProcess( dataset, config ) {
+  var cmd;
+  var agent;
+  var seed;
+  var portsRange;
+
+  // Start agent as a sub-process
+  switch( dataset.data.hotspot.type ) {
+    case 'unix':
+      dataset.data.hotspot.location = path.join( config.home, dataset.extras.id );
+      break;
+    case 'tcp':
+    default:
+      // Randomly find a port in the provided range if required
+      if( ! dataset.data.hotspot.location ) {
+        portsRange = config.range.split( '-' );
+        portsRange[ 0 ] = Number( portsRange[ 0 ] );
+        portsRange[ 1 ] = Number( portsRange[ 1 ] );
+        seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
+        dataset.data.hotspot.location = Math.floor( seed );
+      }
+  }
+
+  // Sub-process setup
+  cmd = dataset.extras.handler || 'buda-agent-' + dataset.data.format;
+
+  // Create agent
+  agent = spawn( cmd, ['--conf', JSON.stringify( dataset.data ) ] );
+  return agent;
 }
 
 // Constructor method
@@ -78,6 +138,9 @@ function BudaManager( params ) {
   });
 }
 
+// Add event emitter capabilities
+util.inherits( BudaManager, events.EventEmitter );
+
 // Default config values
 // - storage: MongoDB instance used for data storage
 // - home: This directory must be readable and writable by the user
@@ -104,9 +167,9 @@ BudaManager.prototype._verifyHome = function() {
     if( ! fs.statSync( this.config.home ).isDirectory() ) {
       throw new Error( 'Home directory does not exist' );
     }
-  } catch( e ) {
+  } catch( err ) {
     this.logger.fatal( 'Home directory does not exist' );
-    process.exit();
+    this.emit( 'error', err );
   }
 
   this.logger.debug( 'Check home directory is readable and writeable' );
@@ -114,7 +177,7 @@ BudaManager.prototype._verifyHome = function() {
     fs.accessSync( this.config.home, fs.R_OK | fs.W_OK );
   } catch( err ) {
     this.logger.fatal( err, 'Invalid permissions' );
-    process.exit();
+    this.emit( 'error', err );
   }
 };
 
@@ -265,90 +328,42 @@ BudaManager.prototype._startInterface = function() {
   this.restapi.start( function( err ) {
     if( err ) {
       self.logger.fatal( err );
-      throw err;
+      self.emit( 'error', err );
     }
   });
 };
 
 // Starts a new dataset agent
-/* eslint complexity:0 */
 BudaManager.prototype._startAgent = function( dataset ) {
   var self = this;
-  var cmd;
-  var seed;
   var agent;
-  var portsRange;
 
   // Use manager storage as the agent's if no host is specified
   if( ! _.has( dataset.data.storage, 'host' ) ) {
     dataset.data.storage.host = this.config.storage;
   }
 
-  // Start agent as a container if running in 'docker' mode
   if( self.config.docker ) {
-    // Set default port to the one exposed on the docker image; it will
-    // be dynamically mapped on launch
-    if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
-      dataset.data.hotspot.location = 8200;
-    }
-
-    // Create docker launch command
-    cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
-    if( dataset.extras.docker.links ) {
-      _.each( dataset.extras.docker.links, function( el ) {
-        cmd += '--link ' + el + ' ';
-      });
-    }
-    cmd += dataset.extras.docker.image + ' ';
-    cmd += "--conf '" + JSON.stringify( dataset.data ) + "'";
-
-    // Start container and use the hash returned as ID
-    agent = execSync( cmd ).toString().substr( 0, 12 );
+    // Start agent as a container if running in 'docker' mode
+    agent = _startContainer( dataset );
     self.logger.info( 'Starting container agent: %s', agent );
     self.logger.debug({
-      configuration: dataset.data,
-      cmd:           cmd
+      configuration: dataset.data
     }, 'Starting container agent: %s', agent );
-
     self.agents[ dataset.extras.id ] = agent;
-    return;
+  } else {
+    // Star agent as subprocess
+    agent = _startSubProcess( dataset, self.config );
+    self.logger.info( 'Starting subprocess agent: %s', agent.pid );
+    self.logger.debug({
+      configuration: dataset.data
+    }, 'Starting agent: %s', agent.pid );
+    self.agents[ dataset.extras.id ] = agent.pid;
   }
 
-  // Start agent as a sub-process
-  // Randomly find a port in the provided range if required
-  if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
-    portsRange = this.config.range.split( '-' );
-    portsRange[ 0 ] = Number( portsRange[ 0 ] );
-    portsRange[ 1 ] = Number( portsRange[ 1 ] );
-    seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
-    dataset.data.hotspot.location = Math.floor( seed );
+  if( agent.stdout ) {
+    agent.stdout.pipe( process.stdout );
   }
-
-  // Sub-process setup
-  cmd = dataset.extras.handler || 'buda-agent-' + dataset.data.format;
-  if( dataset.extras.handler ) {
-    cmd = dataset.extras.handler;
-  }
-
-  // Create agent
-  agent = spawn( cmd, ['--conf', JSON.stringify( dataset.data ) ] );
-  self.logger.info( 'Starting agent: %s', agent.pid );
-  self.logger.debug({
-    configuration: dataset.data,
-    cmd:           cmd
-  }, 'Starting agent: %s', agent.pid );
-
-  // Add agent and attach process PID to the dataset
-  self.agents[ dataset.extras.id ] = agent.pid;
-
-  // Catch information on the agent output
-  agent.stdout.on( 'data', function( msg ) {
-    try {
-      self.logger.debug( msg.toString() );
-    } catch( e ) {
-      self.logger.error( e );
-    }
-  });
 };
 
 // Stops a given dataset agent
@@ -454,13 +469,13 @@ BudaManager.prototype._registerDataset = function( dataset, cb ) {
   // Check dataset details are present
   if( ! dataset ) {
     this.logger.warn( 'Missing parameters' );
-    return { error: true, desc: 'MISSING_PARAMETERS' };
+    return cb({ error: true, desc: 'MISSING_PARAMETERS' });
   }
 
   // Not supported schema version?
   if( ! this.schemas[ 'dataset-' + dataset.version ] ) {
     this.logger.error( 'Unsupported schema version' );
-    return { error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' };
+    return cb({ error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' });
   }
 
   // Validate dataset against the schema version used
@@ -479,7 +494,7 @@ BudaManager.prototype._registerDataset = function( dataset, cb ) {
   dataset.metadata.modified = new Date( dataset.metadata.modified || Date.now() );
 
   // Calculate ID
-  dataset.extras.id = getID( dataset );
+  dataset.extras.id = _getID( dataset );
 
   // Start dataset agent
   this._startAgent( dataset );
@@ -522,7 +537,7 @@ BudaManager.prototype.exit = function() {
         });
       }
       self.logger.info( 'Exiting Manager' );
-      process.exit();
+      self.emit( 'exit' );
     });
   });
 };
@@ -535,7 +550,7 @@ BudaManager.prototype.start = function() {
   // Looking for help ?
   if( _.has( self.config, 'h' ) || _.has( self.config, 'help' ) ) {
     self.printHelp();
-    process.exit();
+    self.emit( 'exit' );
   }
 
   // Log config
@@ -559,7 +574,7 @@ BudaManager.prototype.start = function() {
   });
   mongoose.connection.on( 'error', function( err ) {
     self.logger.fatal( err );
-    process.exit();
+    self.emit( 'error', err );
   });
 
   // Load schemas

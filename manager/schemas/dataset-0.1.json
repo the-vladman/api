@@ -22,7 +22,8 @@
         "location": {
           "type": "string",
           "title": "Location",
-          "description": "Final location used for receiving data, i.e.; port number, socket path, etc..."
+          "description": "Final location used for receiving data, i.e.; port number, socket path, etc...",
+          "default": ""
         }
       }
     },
@@ -32,7 +33,8 @@
       "description": "Provides all the information required to store the data processed in a desired location",
       "required": [
         "collection",
-        "index"
+        "index",
+        "batch"
       ],
       "properties": {
         "collection": {
@@ -45,6 +47,13 @@
           "minLength": 1,
           "title": "Index",
           "description": "Data index(es) used for the data collection"
+        },
+        "batch": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "Batch",
+          "description": "Batch size to use for data storage",
+          "default": 1
         }
       }
     },
@@ -172,9 +181,11 @@
       "description": "Configuration parameters used for storage and processing of the data",
       "additionalProperties": false,
       "required": [
+        "format",
+        "compression",
+        "update",
         "storage",
-        "hotspot",
-        "format"
+        "hotspot"
       ],
       "properties": {
         "hotspot": {
@@ -187,6 +198,13 @@
           "type": "string",
           "title": "Format",
           "description": "Expected data format, a valid agent must be installed for the data type"
+        },
+        "update": {
+          "type": "string",
+          "title": "Update",
+          "description": "Update strategy to use for the dataset",
+          "default": "merge",
+          "enum": ["merge", "replace"]
         },
         "compression": {
           "type": "string",
