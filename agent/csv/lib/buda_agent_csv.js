@@ -6,18 +6,14 @@ var BudaAgent = require( '../../buda_agent' );
 
 // Custom requirements
 var util = require( 'util' );
-var info = require( '../package' );
 var CSV = require( 'csv-stream' );
 
 // Constructor method
-function BudaCSVAgent( conf ) {
+function BudaCSVAgent( conf, handlers ) {
   var self = this;
   var bag = [];
 
-  BudaAgent.call( this, conf );
-
-  // Log agent information
-  this.log( 'Buda CSV Agent ver. ' + info.version );
+  BudaAgent.call( this, conf, handlers );
 
   // Configure data parser
   this.parser = CSV.createStream( this.config.options || {});
@@ -30,17 +26,16 @@ function BudaCSVAgent( conf ) {
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.emit( 'record', bag );
+      self.emit( 'batch', bag );
       bag = [];
     }
-    self.log( 'Processing done!' );
   });
 
   // Process records
   this.parser.on( 'data', function( item ) {
     bag.push( self.transform( item ) );
-    if( bag.length === ( self.config.storage.batch || 50 ) ) {
-      self.emit( 'record', bag );
+    if( bag.length === self.config.storage.batch ) {
+      self.emit( 'batch', bag );
       bag = [];
     }
   });

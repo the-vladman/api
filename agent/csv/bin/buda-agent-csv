@@ -8,18 +8,45 @@ var minimist = require( 'minimist' );
 var BudaCSVAgent = require( '../lib/buda_agent_csv' );
 var params = minimist( process.argv.slice( 2 ) );
 var config;
-var agent;
 
 // Get runtime configuration
 delete params._;
 if( params.conf === undefined ) {
   throw new Error( 'MISSING_CONFIGURATION' );
 }
-config = JSON.parse( params.conf );
+
+// Ensure configuration info is properly encoded
+try {
+  config = JSON.parse( params.conf );
+} catch( e ) {
+  throw new Error( 'INVALID_CONFIGURATION' );
+}
 
 // Set process title
 process.title = 'buda-agent-csv: ' + config.storage.collection;
 
 // Start agent
-agent = new BudaCSVAgent( config );
-agent.start();
+new BudaCSVAgent( config, {
+  'error': function( err ) {
+    this.logger.error( err );
+  },
+  'ready': function() {
+    this.logger.info( 'Ready' );
+  },
+  'exit': function() {
+    this.logger.info( 'Exit' );
+    process.exit();
+  },
+  'flow:start': function() {
+    this.logger.info( 'Data flow start' );
+  },
+  'flow:end': function() {
+    this.logger.info( 'Data flow end' );
+  },
+  'batch': function( bag ) {
+    this.logger.debug({
+      index: this.counter,
+      size:  bag.length
+    }, 'Batch' );
+  }
+}).start();
