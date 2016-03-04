@@ -7,40 +7,35 @@ var BudaAgent = require( '../../buda_agent' );
 // Custom requirements
 var util = require( 'util' );
 var JSONStream = require( 'JSONStream' );
-var info = require( '../package' );
 
 // Constructor method
-function BudaJSONAgent( conf ) {
+function BudaJSONAgent( conf, handlers ) {
   var self = this;
   var bag = [];
 
-  BudaAgent.call( this, conf );
-
-  // Log agent information
-  this.log( 'Buda JSON Agent ver. ' + info.version );
+  BudaAgent.call( this, conf, handlers );
 
   // Configure data parser
-  self.parser = JSONStream.parse( self.config.options.pointer );
+  this.parser = JSONStream.parse( self.config.options.pointer );
 
   // Parser errors
-  self.parser.on( 'error', function( err ) {
+  this.parser.on( 'error', function( err ) {
     self.emit( 'error', err );
   });
 
   // Rewind on complete
-  self.parser.on( 'end', function() {
+  this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.emit( 'record', bag );
+      self.emit( 'batch', bag );
       bag = [];
     }
-    self.log( 'Processing done!' );
   });
 
   // Process records
-  self.parser.on( 'data', function( item ) {
+  this.parser.on( 'data', function( item ) {
     bag.push( item );
-    if( bag.length === ( self.config.storage.batch || 50 ) ) {
-      self.emit( 'record', bag );
+    if( bag.length === self.config.storage.batch ) {
+      self.emit( 'batch', bag );
       bag = [];
     }
   });
