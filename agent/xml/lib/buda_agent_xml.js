@@ -7,15 +7,12 @@ var BudaAgent = require( '../../buda_agent' );
 // Custom requirements
 var util = require( 'util' );
 var net = require( 'net' );
-var info = require( '../package' );
+var zlib = require( 'zlib' );
 var xmlflow = require( 'xml-flow' );
 
 // Constructor method
-function BudaXMLAgent( conf ) {
-  BudaAgent.call( this, conf );
-
-  // Log agent information
-  this.log( 'Buda XML Agent ver. ' + info.version );
+function BudaXMLAgent( conf, handlers ) {
+  BudaAgent.call( this, conf, handlers );
 }
 util.inherits( BudaXMLAgent, BudaAgent );
 
@@ -34,6 +31,8 @@ BudaXMLAgent.prototype.cleanItem = function( item ) {
 BudaXMLAgent.prototype.start = function() {
   var self = this;
   var bag = [];
+  var finalPass = false;
+  var decompressor;
 
   // Connect to data storage using the parent implementation
   BudaXMLAgent.super_.prototype.connectStorage.apply( this );
@@ -42,20 +41,41 @@ BudaXMLAgent.prototype.start = function() {
   self.incoming = net.createServer( function( socket ) {
     // Set up parser
     if( self.config.compression !== 'none' ) {
-      throw new Error( 'GZIP functionality not ready!' );
-      // The decompressor closes the stream before the first iteration, passing
-      // end: false is not working with the parser being used
-      // self.parser = xmlflow( socket.pipe( self.decrompressor ), self.config.options );
+      // Create decompressor
+      switch( self.config.compression ) {
+        default:
+        case 'gzip':
+          decompressor = zlib.createGunzip();
+          break;
+      }
+      self.parser = xmlflow( socket.pipe( decompressor ), self.config.options );
     } else {
       self.parser = xmlflow( socket, self.config.options );
     }
 
     // Store records
-    self.on( 'record', function( data ) {
+    self.on( 'batch', function( data ) {
+      // Increase counter
+      self.counter += 1;
+
+      // Clear previous timer if any
+      if( finalPass ) {
+        clearTimeout( finalPass );
+      } else {
+        self.emit( 'flow:start' );
+      }
+
+      // Setup final pass timer
+      finalPass = setTimeout( function() {
+        self.parser.emit( 'end' );
+        self.emit( 'flow:end' );
+        clearTimeout( finalPass );
+      }, BudaAgent.UPDATE_PASS_LENGTH );
+
       // Store bag of records
       self.model.collection.insert( data, function( err ) {
         if( err ) {
-          throw err;
+          self.emit( 'error', err );
         }
       });
     });
@@ -68,18 +88,17 @@ BudaXMLAgent.prototype.start = function() {
     // Rewind on complete
     self.parser.on( 'end', function() {
       if( bag.length > 0 ) {
-        self.emit( 'record', bag );
+        self.emit( 'batch', bag );
         bag = [];
       }
-      self.log( 'Processing done!' );
     });
 
     // Process records
     self.parser.on( 'tag:' + self.config.options.pointer, function( item ) {
       // Cleanup items
       bag.push( self.transform( self.cleanItem( item ) ) );
-      if( bag.length === ( self.config.storage.batch || 50 ) ) {
-        self.emit( 'record', bag );
+      if( bag.length === self.config.storage.batch ) {
+        self.emit( 'batch', bag );
         bag = [];
       }
     });
@@ -87,7 +106,7 @@ BudaXMLAgent.prototype.start = function() {
 
   // Start listening for data
   this.incoming.listen( this.endpoint, function() {
-    self.log( 'Agent ready' );
+    self.emit( 'ready' );
   });
 };
 
