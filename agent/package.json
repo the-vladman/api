@@ -9,9 +9,10 @@
     "url": "https://github.com/mxabierto/buda.git"
   },
   "dependencies": {
+    "bunyan": "=1.7.1",
+    "byline": "=4.2.1",
     "minimist": "=1.2.0",
     "mongoose": "=4.3.7",
-    "underscore": "=1.8.3",
-    "byline": "=4.2.1"
+    "underscore": "=1.8.3"
   }
 }
