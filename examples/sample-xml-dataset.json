@@ -13,10 +13,12 @@
   },
   "data": {
     "format": "xml",
-    "compression": "none",
+    "compression": "gzip",
+    "update": "merge",
     "storage": {
       "collection": "calidadAire",
-      "index": "_id"
+      "index": "_id",
+      "batch": 1
     },
     "hotspot": {
       "type": "tcp",

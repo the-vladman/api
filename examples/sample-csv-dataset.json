@@ -13,10 +13,12 @@
   },
   "data": {
     "format": "csv",
-    "compression": "none",
+    "compression": "gzip",
+    "update": "merge",
     "storage": {
       "collection": "codigosPostales",
-      "index": "d_codigo"
+      "index": "d_codigo",
+      "batch": 100
     },
     "hotspot": {
       "type": "tcp",

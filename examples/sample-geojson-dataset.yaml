@@ -15,10 +15,12 @@ metadata:
   accessLevel: public
 data:
   format: geojson
-  compression: none
+  compression: gzip
+  update: merge
   storage:
     collection: callesVeracruz
     index: _id
+    batch: 50
   hotspot:
     type: tcp
     location: ''
