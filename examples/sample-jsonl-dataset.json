@@ -14,7 +14,7 @@
   "data": {
     "format": "jsonl",
     "compression": "gzip",
-    "update": "merge",
+    "update": "replace",
     "storage": {
       "collection": "lines",
       "index": "_id",

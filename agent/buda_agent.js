@@ -7,6 +7,8 @@
 // - exit
 // - ready
 // - batch
+// - client:open
+// - client:close
 // - flow:start
 // - flow:end
 //
@@ -25,6 +27,8 @@
 var _ = require( 'underscore' );
 var net = require( 'net' );
 var util = require( 'util' );
+var uuid = require( 'node-uuid' );
+var async = require( 'async' );
 var zlib = require( 'zlib' );
 var bunyan = require( 'bunyan' );
 var mongoose = require( 'mongoose' );
@@ -124,33 +128,66 @@ BudaAgent.prototype.start = function() {
       self.parser.emit( 'end' );
       self.emit( 'flow:end', self.currentState );
       clearTimeout( finalPass );
+      finalPass = null;
     }, BudaAgent.UPDATE_PASS_LENGTH );
 
     // Store bag of records
     self.model.collection.insert( bag, function( err ) {
       if( err ) {
-        throw err;
+        self.emit( 'error', err );
       }
     });
   });
 
   // Create server
   self.incoming = net.createServer( function( socket ) {
-    if( self.config.compression !== 'none' ) {
-      // Create decompressor
-      switch( self.config.compression ) {
-        default:
-        case 'gzip':
-          decompressor = zlib.createGunzip();
-          break;
-      }
+    async.waterfall( [
+      // Cleanup data if required
+      function( next ) {
+        if( self.config.update === 'replace' ) {
+          self.logger.info( 'Cleanup' );
+          self.model.collection.remove({}, function() {
+            next( null );
+          });
+        } else {
+          next( null );
+        }
+      },
+      // Setup client
+      function( next ) {
+        // Attach client ID
+        socket.id = uuid.v4();
 
-      socket
-        .pipe( decompressor, { end: false })
-        .pipe( self.parser, { end: false });
-    } else {
-      socket.pipe( self.parser, { end: false });
-    }
+        if( self.config.compression !== 'none' ) {
+          // Create decompressor
+          switch( self.config.compression ) {
+            default:
+            case 'gzip':
+              decompressor = zlib.createGunzip();
+              break;
+          }
+
+          socket
+            .pipe( decompressor, { end: false })
+            .pipe( self.parser, { end: false });
+        } else {
+          socket.pipe( self.parser, { end: false });
+        }
+
+        // Notify client closed
+        socket.on( 'close', function() {
+          self.emit( 'client:close', this );
+        });
+
+        // Notify client connection
+        self.emit( 'client:open', socket );
+        next( null );
+      }
+    ], function( err ) {
+      if( err ) {
+        self.emit( 'error', err );
+      }
+    });
   });
 
   // Start listening for data

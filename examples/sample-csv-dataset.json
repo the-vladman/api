@@ -14,7 +14,7 @@
   "data": {
     "format": "csv",
     "compression": "gzip",
-    "update": "merge",
+    "update": "replace",
     "storage": {
       "collection": "codigosPostales",
       "index": "d_codigo",

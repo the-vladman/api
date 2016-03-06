@@ -16,7 +16,7 @@ metadata:
 data:
   format: xml
   compression: gzip
-  update: merge
+  update: replace
   storage:
     collection: calidadAire
     index: _id
