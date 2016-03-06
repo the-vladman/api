@@ -61,7 +61,7 @@ function _startContainer( dataset ) {
 
   // Set default port to the one exposed on the docker image; it will
   // be dynamically mapped on launch
-  if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
+  if( dataset.data.hotspot.type === 'tcp' ) {
     dataset.data.hotspot.location = 8200;
   }
 
@@ -77,6 +77,11 @@ function _startContainer( dataset ) {
 
   // Start container and use the hash returned as ID
   agent = execSync( cmd ).toString().substr( 0, 12 );
+
+  // Get container port mapping
+  cmd = 'docker inspect ';
+  cmd += '-f=\'{{(index (index .NetworkSettings.Ports "8200/tcp") 0).HostPort}}\' ';
+  dataset.data.hotspot.location = execSync( cmd + agent ).toString().trim();
   return agent;
 }
 
