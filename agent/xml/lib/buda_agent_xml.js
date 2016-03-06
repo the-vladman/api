@@ -55,20 +55,22 @@ BudaXMLAgent.prototype.start = function() {
 
     // Store records
     self.on( 'batch', function( data ) {
-      // Increase counter
-      self.counter += 1;
+      // Increase counters
+      self.currentState.batchCounter += 1;
+      self.currentState.recordsCounter += bag.length;
 
       // Clear previous timer if any
       if( finalPass ) {
         clearTimeout( finalPass );
       } else {
-        self.emit( 'flow:start' );
+        self.emit( 'flow:start', self.currentState );
       }
 
       // Setup final pass timer
       finalPass = setTimeout( function() {
+        self.currentState.lastUpdate = new Date();
         self.parser.emit( 'end' );
-        self.emit( 'flow:end' );
+        self.emit( 'flow:end', self.currentState );
         clearTimeout( finalPass );
       }, BudaAgent.UPDATE_PASS_LENGTH );
 

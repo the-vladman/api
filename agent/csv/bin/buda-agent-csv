@@ -40,8 +40,10 @@ new BudaCSVAgent( config, {
   'flow:start': function() {
     this.logger.info( 'Data flow start' );
   },
-  'flow:end': function() {
-    this.logger.info( 'Data flow end' );
+  'flow:end': function( state ) {
+    this.logger.info({
+      state: state
+    }, 'Data flow end' );
   },
   'batch': function( bag ) {
     this.logger.debug({

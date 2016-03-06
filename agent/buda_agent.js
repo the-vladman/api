@@ -43,8 +43,13 @@ function BudaAgent( conf, handlers ) {
   // Store configuration options
   this.config = conf;
 
-  // Processed packages counter
-  this.counter = 0;
+  // Internal agent state
+  this.currentState = {
+    creationDate:   new Date(),
+    lastUpdate:     null,
+    batchCounter:   0,
+    recordsCounter: 0
+  };
 
   // Location to listen for incoming data packets
   this.endpoint = conf.hotspot.location;
@@ -102,20 +107,22 @@ BudaAgent.prototype.start = function() {
   // Since we're using "end:false" as piping option some parsers don't emit
   // the 'end' event; using a timer we manually emit the event once per data upload
   self.on( 'batch', function( bag ) {
-    // Increase counter
-    self.counter += 1;
+    // Increase counters
+    self.currentState.batchCounter += 1;
+    self.currentState.recordsCounter += bag.length;
 
     // Clear previous timer if any
     if( finalPass ) {
       clearTimeout( finalPass );
     } else {
-      self.emit( 'flow:start' );
+      self.emit( 'flow:start', self.currentState );
     }
 
     // Setup final pass timer
     finalPass = setTimeout( function() {
+      self.currentState.lastUpdate = new Date();
       self.parser.emit( 'end' );
-      self.emit( 'flow:end' );
+      self.emit( 'flow:end', self.currentState );
       clearTimeout( finalPass );
     }, BudaAgent.UPDATE_PASS_LENGTH );
 
