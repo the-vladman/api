@@ -9,7 +9,6 @@ var _ = require( 'underscore' );
 var minimist = require( 'minimist' );
 var BudaManager = require( '../lib/buda_manager' );
 var config;
-var manager;
 var linkedStorage;
 
 // Set process title
@@ -33,7 +32,6 @@ config = minimist( process.argv.slice( 2 ), { default: config });
 delete config._;
 
 // Create and start manager instance
-manager = new BudaManager( config );
-manager.on( 'exit', function() {
+new BudaManager( config ).on( 'exit', function() {
   process.exit();
 }).start();

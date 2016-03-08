@@ -9,12 +9,14 @@
     "url": "https://github.com/mxabierto/buda.git"
   },
   "dependencies": {
+    "async": "=1.5.2",
     "bunyan": "=1.7.0",
     "colors": "=1.1.2",
     "hapi": "=13.0.0",
     "jsen": "=0.6.0",
     "minimist": "=1.2.0",
     "mongoose": "=4.4.5",
+    "openssl-wrapper": "=0.2.3",
     "underscore": "=1.8.3",
     "yamljs": "=0.2.5"
   },
