@@ -12,6 +12,7 @@ var CSV = require( 'csv-stream' );
 function BudaCSVAgent( conf, handlers ) {
   var self = this;
   var bag = [];
+  var rec = false;
 
   BudaAgent.call( this, conf, handlers );
 
@@ -33,7 +34,10 @@ function BudaCSVAgent( conf, handlers ) {
 
   // Process records
   this.parser.on( 'data', function( item ) {
-    bag.push( self.transform( item ) );
+    rec = self.transform( item );
+    if( rec ) {
+      bag.push( rec );
+    }
     if( bag.length === self.config.storage.batch ) {
       self.emit( 'batch', bag );
       bag = [];

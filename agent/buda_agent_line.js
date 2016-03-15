@@ -42,6 +42,7 @@ BudaLineAgent.prototype.transform = function( line ) {
 BudaLineAgent.prototype.start = function() {
   var self = this;
   var bag = [];
+  var rec = false;
   var finalPass = false;
   var decompressor;
 
@@ -141,7 +142,10 @@ BudaLineAgent.prototype.start = function() {
 
         // Process data
         self.parser.on( 'data', function( line ) {
-          bag.push( self.transform( line.toString() ) );
+          rec = self.transform( line.toString() );
+          if( rec ) {
+            bag.push( rec );
+          }
           if( bag.length === self.config.storage.batch ) {
             self.emit( 'batch', bag );
             bag = [];

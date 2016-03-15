@@ -33,6 +33,7 @@ BudaXMLAgent.prototype.cleanItem = function( item ) {
 BudaXMLAgent.prototype.start = function() {
   var self = this;
   var bag = [];
+  var rec = false;
   var finalPass = false;
   var decompressor;
 
@@ -128,7 +129,10 @@ BudaXMLAgent.prototype.start = function() {
         // Process records
         self.parser.on( 'tag:' + self.config.options.pointer, function( item ) {
           // Cleanup items
-          bag.push( self.transform( self.cleanItem( item ) ) );
+          rec = self.transform( self.cleanItem( item ) );
+          if( rec ) {
+            bag.push( rec );
+          }
           if( bag.length === self.config.storage.batch ) {
             self.emit( 'batch', bag );
             bag = [];
