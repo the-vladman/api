@@ -35,55 +35,35 @@ var indices = [
 
 // Constructor method
 // Extends base CSV Agent definition
-function AirQualityAgent( conf ) {
-  BudaCSVAgent.call( this, conf );
+function AirQualityAgent( conf, handlers ) {
+  BudaCSVAgent.call( this, conf, handlers );
 }
 util.inherits( AirQualityAgent, BudaCSVAgent );
-
-// FIX
-// Temporary solution to get the value for source_id; the ideal approach
-// will be the data is present in the records
-function _findSourceID( station ) {
-  var res = '';
-  var list = {
-    GDL: [ 'ATM', 'CEN', 'AGU', 'PIN', 'LDO', 'MIR', 'OBL', 'SFE', 'TLA', 'VAL' ],
-    TLC: [ 'AP', 'CE', 'CB', 'MT', 'OX', 'SC', 'SM' ],
-    MTY: [ 'SO', 'NO', 'CE', 'NE', 'SE', 'N', 'NO2', 'NE2', 'SE2', 'SO2' ]
-  };
-
-  /* eslint space-unary-ops:0 */
-  _.each( list, function( v, k ) {
-    if( _.indexOf( v, station ) > -1 ) {
-      res = k;
-    }
-  });
-
-  return res;
-}
 
 // Custom transform method to comply with the Air Quality Feed Spec
 AirQualityAgent.prototype.transform = function( record ) {
   var m;
   var doc = new FeedSpec.FeedEntry();
-  var date = new Date( record.fecha + ' ' + record.hora );
+  var date = new Date( record.date + ' ' + record.time );
 
-  if( ! record.nom || record.nom === '' ) {
+  if( record.source.trim() === '-' || record.source.trim() === '' ) {
     this.emit( 'error', record );
+    return false;
   }
 
   /* eslint camelcase:0 */
   doc.stations[ 0 ].id = record.cve;
-  doc.stations[ 0 ].name = record.nom;
-  doc.stations[ 0 ].source_id = _findSourceID( record.cve ) || '';
+  doc.stations[ 0 ].name = record.station;
+  doc.stations[ 0 ].source_id = record.source;
   doc.stations[ 0 ].location.lat = record.lat;
-  doc.stations[ 0 ].location.lon = record.lon;
-  if( _.indexOf( pollutants, record.para ) >= 0 ) {
+  doc.stations[ 0 ].location.lon = record.long;
+  if( _.indexOf( pollutants, record.param ) >= 0 ) {
     m = new FeedSpec.Measurement();
     m.time = date;
-    m.pollutant = record.para;
-    m.unit = record.unidad || '';
-    m.value = record.indice || '';
-    m.averagedOverInHours = record.avetime || '';
+    m.pollutant = record.param;
+    m.unit = record.unit;
+    m.value = record.index;
+    m.averagedOverInHours = record.average;
     doc.stations[ 0 ].measurements.push( m );
   }
 
