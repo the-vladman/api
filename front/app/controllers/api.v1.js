@@ -377,9 +377,12 @@ module.exports = function( options ) {
     },
 
     // Run a general data query
+    /* eslint max-len:0 */
     runQuery: function( req, res, next ) {
+      // ISO 8601 regex
+      // Originally from: http://goo.gl/qKfN2e
+      var isoDateRE = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$/;
       var operatorRE = /\[(\w*):(.*)\]/;
-      var simpleDateRE = /^\d{2,4}([./-])\d{2}\1\d{2,4}$/;
       var collection = req.params.dataCollection;
       var opSegments;
       var DataObject;
@@ -423,7 +426,8 @@ module.exports = function( options ) {
             // Greater than
             case 'gt':
               // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( simpleDateRE ) ) {
+              if( opSegments[ 2 ].match( isoDateRE ) ) {
+                console.log( 'is a date' );
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -432,7 +436,7 @@ module.exports = function( options ) {
             // Greater than or equal
             case 'gte':
               // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( simpleDateRE ) ) {
+              if( opSegments[ 2 ].match( isoDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -441,7 +445,7 @@ module.exports = function( options ) {
             // Lesser than
             case 'lt':
               // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( simpleDateRE ) ) {
+              if( opSegments[ 2 ].match( isoDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -450,7 +454,7 @@ module.exports = function( options ) {
             // Lesser than or equal
             case 'lte':
               // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( simpleDateRE ) ) {
+              if( opSegments[ 2 ].match( isoDateRE ) ) {
                 opSegments[ 2 ] = new Date( opSegments[ 2 ] );
               }
 
@@ -470,10 +474,10 @@ module.exports = function( options ) {
               queryRange = opSegments[ 2 ].split( '|' );
 
               // Verify if provided values are valid dates
-              if( queryRange[ 0 ].match( simpleDateRE ) ) {
+              if( queryRange[ 0 ].match( isoDateRE ) ) {
                 queryRange[ 0 ] = new Date( queryRange[ 0 ] );
               }
-              if( queryRange[ 1 ].match( simpleDateRE ) ) {
+              if( queryRange[ 1 ].match( isoDateRE ) ) {
                 queryRange[ 1 ] = new Date( queryRange[ 1 ] );
               }
 
