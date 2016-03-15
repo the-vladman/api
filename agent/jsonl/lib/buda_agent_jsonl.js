@@ -15,7 +15,15 @@ util.inherits( BudaJSONLAgent, BudaLineAgent );
 
 // Parse each line as a JSON object
 BudaJSONLAgent.prototype.transform = function( line ) {
-  return JSON.parse( line );
+  var res;
+
+  try {
+    res = JSON.parse( line );
+    return res;
+  } catch( e ) {
+    this.emit( 'error', line );
+    return false;
+  }
 };
 
 module.exports = BudaJSONLAgent;
