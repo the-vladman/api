@@ -1,0 +1,21 @@
+[Unit]
+Description=BUDA ODBC - Provides a ODBC interface using Apache Drill
+Documentation=https://drill.apache.org/docs/
+Requires=buda-storage.service
+After=buda-storage.service
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+KillMode=none
+
+ExecStartPre=-/usr/bin/docker kill buda-odbc
+ExecStartPre=-/usr/bin/docker rm buda-odbc
+ExecStartPre=-/usr/bin/docker pull mxabierto/drill
+ExecStart=/usr/bin/docker run \
+  --name=buda-odbc \
+  --link buda-storage:mongo \
+  -p 31010:31010 \
+  mxabierto/drill
+ExecStop=/usr/bin/docker stop buda-odbc

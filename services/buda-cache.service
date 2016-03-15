@@ -1,9 +1,7 @@
 [Unit]
 Description=Buda Cache
 Documentation=https://github.com/mxabierto/buda
-Requires=flanneld.service
 Requires=buda-front.service
-After=flanneld.service
 After=buda-front.service
 
 [Service]
@@ -14,7 +12,8 @@ KillMode=none
 
 ExecStartPre=-/usr/bin/docker kill buda-cache
 ExecStartPre=-/usr/bin/docker rm buda-cache
-ExecStart=/usr/bin/docker run --name=buda-cache \
+ExecStart=/usr/bin/docker run \
+  --name=buda-cache \
   --link buda-front:backend \
   -p 80:6081 mxabierto/varnish
 ExecStop=/usr/bin/docker stop buda-cache

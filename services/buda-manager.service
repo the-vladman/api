@@ -1,9 +1,7 @@
 [Unit]
 Description=Buda Manager
 Documentation=https://github.com/mxabierto/buda
-Requires=flanneld.service
 Requires=buda-storage.service
-After=flanneld.service
 After=buda-storage.service
 
 [Service]
@@ -14,7 +12,8 @@ KillMode=none
 
 ExecStartPre=-/usr/bin/docker kill buda-manager
 ExecStartPre=-/usr/bin/docker rm buda-manager
-ExecStart=/usr/bin/docker run --name=buda-manager \
+ExecStart=/usr/bin/docker run \
+  --name=buda-manager \
   --link buda-storage:storage \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -P mxabierto/buda-manager --docker

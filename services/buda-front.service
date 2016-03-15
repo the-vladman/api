@@ -1,9 +1,7 @@
 [Unit]
 Description=Buda Front
 Documentation=https://github.com/mxabierto/buda
-Requires=flanneld.service
 Requires=buda-storage.service
-After=flanneld.service
 After=buda-storage.service
 
 [Service]
@@ -14,7 +12,8 @@ KillMode=none
 
 ExecStartPre=-/usr/bin/docker kill buda-front
 ExecStartPre=-/usr/bin/docker rm buda-front
-ExecStart=/usr/bin/docker run --name=buda-front \
+ExecStart=/usr/bin/docker run \
+  --name=buda-front \
   --link buda-storage:storage \
   -P mxabierto/buda-front
 ExecStop=/usr/bin/docker stop buda-front
