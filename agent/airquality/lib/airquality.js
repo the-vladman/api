@@ -43,6 +43,7 @@ util.inherits( AirQualityAgent, BudaCSVAgent );
 // Custom transform method to comply with the Air Quality Feed Spec
 AirQualityAgent.prototype.transform = function( record ) {
   var m;
+  var i;
   var doc = new FeedSpec.FeedEntry();
   var date = new Date( record.date + ' ' + record.time );
 
@@ -62,10 +63,17 @@ AirQualityAgent.prototype.transform = function( record ) {
     m.time = date;
     m.pollutant = record.param;
     m.unit = record.unit;
-    m.value = record.index;
+    m.value = record.concentration;
     m.averagedOverInHours = record.average;
     doc.stations[ 0 ].measurements.push( m );
   }
+
+  i = new FeedSpec.Index();
+  i.scale = 'IMECA';
+  i.value = record.index;
+  i.responsiblePollutant = '';
+  i.calculationTime = date;
+  doc.stations[ 0 ].indexes.push( i );
 
   return doc;
 };
