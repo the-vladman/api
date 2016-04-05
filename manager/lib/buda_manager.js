@@ -70,6 +70,8 @@ function _startContainer( dataset ) {
 
   // Create docker launch command
   cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
+  cmd += '--log-opt max-size=20m ';
+  cmd += '--log-opt max-file=5 ';
   if( dataset.extras.docker.links ) {
     _.each( dataset.extras.docker.links, function( el ) {
       cmd += '--link ' + el + ' ';
