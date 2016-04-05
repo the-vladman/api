@@ -1,6 +1,6 @@
 {
   "name": "buda-agent-jsonl",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Buda Agent for JSONL processing",
   "scripts": {
     "test": "npm test"

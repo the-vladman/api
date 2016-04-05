@@ -15,14 +15,15 @@ metadata:
   accessLevel: public
 data:
   format: jsonl
-  compression: none
+  compression: gzip
+  update: replace
   storage:
     collection: lines
     index: _id
+    batch: 5
   hotspot:
     type: tcp
     location: ''
-  options:
 extras:
   docker:
     image: mxabierto/buda-agent-jsonl

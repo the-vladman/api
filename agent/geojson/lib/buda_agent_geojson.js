@@ -10,7 +10,6 @@ var util = require( 'util' );
 var mongoose = require( 'mongoose' );
 var JSONStream = require( 'JSONStream' );
 var GJV = require( 'geojson-validation' );
-var info = require( '../package' );
 
 // Private utility method
 // Coords should be stored as long,lat; no altitude element included
@@ -51,14 +50,11 @@ function removeDups( coords ) {
 }
 
 // Constructor method
-function BudaGeoJSONAgent( conf ) {
+function BudaGeoJSONAgent( conf, handlers ) {
   var self = this;
   var bag = [];
 
-  BudaAgent.call( this, conf );
-
-  // Log agent information
-  this.log( 'Buda GeoJSON Agent ver. ' + info.version );
+  BudaAgent.call( this, conf, handlers );
 
   // Custom schema and data model
   this.storageSchema = new mongoose.Schema({
@@ -77,10 +73,9 @@ function BudaGeoJSONAgent( conf ) {
   // Rewind on complete
   this.parser.on( 'end', function() {
     if( bag.length > 0 ) {
-      self.emit( 'record', bag );
+      self.emit( 'batch', bag );
       bag = [];
     }
-    self.log( 'Processing done!' );
   });
 
   // Process records
@@ -114,12 +109,9 @@ function BudaGeoJSONAgent( conf ) {
         }
         bag.push( item );
         if( bag.length === ( self.config.storage.batch || 20 ) ) {
-          self.emit( 'record', bag );
+          self.emit( 'batch', bag );
           bag = [];
         }
-      } else {
-        // Attach obj information
-        self.emit( 'error', new Error( 'Invalid GeoJSON feature' ) );
       }
     });
   });

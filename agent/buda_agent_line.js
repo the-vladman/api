@@ -21,11 +21,14 @@ var BudaAgent = require( './buda_agent' );
 // Custom requirements
 var net = require( 'net' );
 var util = require( 'util' );
+var uuid = require( 'node-uuid' );
+var async = require( 'async' );
+var zlib = require( 'zlib' );
 var byline = require( 'byline' );
 
 // Constructor method
-function BudaLineAgent( conf ) {
-  BudaAgent.call( this, conf );
+function BudaLineAgent( conf, handlers ) {
+  BudaAgent.call( this, conf, handlers );
 }
 util.inherits( BudaLineAgent, BudaAgent );
 
@@ -39,62 +42,128 @@ BudaLineAgent.prototype.transform = function( line ) {
 BudaLineAgent.prototype.start = function() {
   var self = this;
   var bag = [];
+  var rec = false;
+  var finalPass = false;
+  var decompressor;
 
   // Connect to data storage using the parent implementation
   BudaLineAgent.super_.prototype.connectStorage.apply( this );
 
-  // Create server
-  this.incoming = net.createServer( function( socket ) {
-    // Set up parser
-    if( self.config.compression !== 'none' ) {
-      throw new Error( 'GZIP functionality not ready!' );
-      // The decompressor closes the stream before the first iteration, passing
-      // end: false is not working with the parser being used
-      // self.parser = byline( socket.pipe( self.decrompressor ), {
-      //   end: false
-      // });
+  // Store records
+  self.on( 'batch', function( data ) {
+    // Increase counters
+    self.currentState.batchCounter += 1;
+    self.currentState.recordsCounter += bag.length;
+
+    // Clear previous timer if any
+    if( finalPass ) {
+      clearTimeout( finalPass );
     } else {
-      self.parser = byline( socket, {
-        end: false
-      });
+      self.emit( 'flow:start', self.currentState );
     }
 
-    // Store records
-    self.on( 'record', function( data ) {
-      // Store bag of records
-      self.model.collection.insert( data, function( err ) {
-        if( err ) {
-          throw err;
-        }
-      });
-    });
+    // Setup final pass timer
+    finalPass = setTimeout( function() {
+      self.currentState.lastUpdate = new Date();
+      self.parser.emit( 'end' );
+      self.emit( 'flow:end', self.currentState );
+      clearTimeout( finalPass );
+      finalPass = null;
+    }, BudaAgent.UPDATE_PASS_LENGTH );
 
-    // Parser errors
-    self.parser.on( 'error', function( err ) {
-      throw err;
-    });
-
-    // Complete
-    self.parser.on( 'end', function() {
-      if( bag.length > 0 ) {
-        self.emit( 'record', bag );
-        bag = [];
+    // Store bag of records
+    self.model.collection.insert( data, function( err ) {
+      if( err ) {
+        self.emit( 'error', err );
       }
-      self.log( 'Processing done!' );
     });
+  });
 
-    self.parser.on( 'data', function( line ) {
-      bag.push( self.transform( line.toString() ) );
-      if( bag.length === ( self.config.storage.batch || 5 ) ) {
-        self.emit( 'record', bag );
-        bag = [];
+  // Create server
+  this.incoming = net.createServer( function( socket ) {
+    async.waterfall( [
+      // Cleanup data if required
+      function( next ) {
+        if( self.config.update === 'replace' ) {
+          self.logger.info( 'Cleanup' );
+          self.model.collection.remove({}, function() {
+            next( null );
+          });
+        } else {
+          next( null );
+        }
+      },
+      // Setup client
+      function( next ) {
+        // Attach client ID
+        socket.id = uuid.v4();
+
+        if( self.config.compression !== 'none' ) {
+          // Create decompressor
+          switch( self.config.compression ) {
+            default:
+            case 'gzip':
+              decompressor = zlib.createGunzip();
+              break;
+          }
+
+          self.parser = byline( socket.pipe( decompressor ), {
+            end: false
+          });
+        } else {
+          self.parser = byline( socket, {
+            end: false
+          });
+        }
+
+        // Notify client closed
+        socket.on( 'close', function() {
+          self.emit( 'client:close', this );
+        });
+
+        // Notify client connection
+        self.emit( 'client:open', socket );
+        next( null );
+      },
+      // Custom parser setup
+      function( next ) {
+        // Parser errors
+        self.parser.on( 'error', function( err ) {
+          self.emit( 'error', err );
+        });
+
+        // Complete
+        self.parser.on( 'end', function() {
+          if( bag.length > 0 ) {
+            self.emit( 'batch', bag );
+            bag = [];
+          }
+        });
+
+        // Process data
+        self.parser.on( 'data', function( line ) {
+          rec = self.transform( line.toString() );
+          if( rec ) {
+            bag.push( rec );
+          }
+          if( bag.length === self.config.storage.batch ) {
+            self.emit( 'batch', bag );
+            bag = [];
+          }
+        });
+
+        next( null );
+      }
+    ], function( err ) {
+      if( err ) {
+        self.emit( 'error', err );
       }
     });
   });
 
   // Start listening for data
   this.incoming.listen( this.endpoint, function() {
-    self.log( 'Agent ready' );
+    self.emit( 'ready' );
   });
 };
 

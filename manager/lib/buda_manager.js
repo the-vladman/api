@@ -1,4 +1,4 @@
-/* eslint no-sync:0, no-process-exit:0 */
+/* eslint no-sync:0 */
 // Buda Manager
 // ============
 // Handle a graph of subprocesses for data manipulation on
@@ -19,6 +19,9 @@
 // Load required modules
 var _ = require( 'underscore' );
 var fs = require( 'fs' );
+var os = require( 'os' );
+var events = require( 'events' );
+var util = require( 'util' );
 var path = require( 'path' );
 var Hapi = require( 'hapi' );
 var crypto = require( 'crypto' );
@@ -30,13 +33,15 @@ var bunyan = require( 'bunyan' );
 var jsen = require( 'jsen' );
 var mongoose = require( 'mongoose' );
 var YAML = require( 'yamljs' );
+var async = require( 'async' );
+var openssl = require( 'openssl-wrapper' );
 
 // Storage elements
 var DatasetStorageSchema = new mongoose.Schema({});
 var DatasetModel;
 
 // Utility method to calculate a dataset ID
-function getID( dataset ) {
+function _getID( dataset ) {
   var shasum = crypto.createHash( 'sha256' );
   var digest = '|';
 
@@ -51,6 +56,72 @@ function getID( dataset ) {
   shasum.update( digest );
   return shasum.digest( 'hex' );
 }
+
+// Utility method, starts dataset agent as a Docker container
+function _startContainer( dataset ) {
+  var cmd;
+  var agent;
+
+  // Set default port to the one exposed on the docker image; it will
+  // be dynamically mapped on launch
+  if( dataset.data.hotspot.type === 'tcp' ) {
+    dataset.data.hotspot.location = 8200;
+  }
+
+  // Create docker launch command
+  cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
+  cmd += '--log-opt max-size=20m ';
+  cmd += '--log-opt max-file=5 ';
+  if( dataset.extras.docker.links ) {
+    _.each( dataset.extras.docker.links, function( el ) {
+      cmd += '--link ' + el + ' ';
+    });
+  }
+  cmd += dataset.extras.docker.image + ' ';
+  cmd += "--conf '" + JSON.stringify( dataset.data ) + "'";
+
+  // Start container and use the hash returned as ID
+  agent = execSync( cmd ).toString().substr( 0, 12 );
+
+  // Get container port mapping
+  cmd = 'docker inspect ';
+  cmd += '-f=\'{{(index (index .NetworkSettings.Ports "8200/tcp") 0).HostPort}}\' ';
+  dataset.data.hotspot.location = execSync( cmd + agent ).toString().trim();
+  return agent;
+}
+
+// Utility method, starts dataset agent as a subprocess
+function _startSubProcess( dataset, config ) {
+  var cmd;
+  var agent;
+  var seed;
+  var portsRange;
+
+  // Start agent as a sub-process
+  switch( dataset.data.hotspot.type ) {
+    case 'unix':
+      dataset.data.hotspot.location = path.join( config.home, dataset.extras.id );
+      break;
+    case 'tcp':
+    default:
+      // Randomly find a port in the provided range if required
+      if( ! dataset.data.hotspot.location ) {
+        portsRange = config.range.split( '-' );
+        portsRange[ 0 ] = Number( portsRange[ 0 ] );
+        portsRange[ 1 ] = Number( portsRange[ 1 ] );
+        seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
+        dataset.data.hotspot.location = Math.floor( seed );
+      }
+  }
+
+  // Sub-process setup
+  cmd = dataset.extras.handler || 'buda-agent-' + dataset.data.format;
+
+  // Create agent
+  agent = spawn( cmd, ['--conf', JSON.stringify( dataset.data ) ] );
+  return agent;
+}
+
 
 // Constructor method
 function BudaManager( params ) {
@@ -78,22 +149,30 @@ function BudaManager( params ) {
   });
 }
 
+// Add event emitter capabilities
+util.inherits( BudaManager, events.EventEmitter );
+
 // Default config values
-// - storage: MongoDB instance used for data storage
-// - home: This directory must be readable and writable by the user
-//   starting the daemon.
+// - home: This directory must be readable and writable by the user starting
+//   the daemon
 // - port: Main TCP port used to wait for commands using the API,
 //   only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advised ( nor required )
-// - docker: If set, launch agents as docker containers instead of
-//   child processes
+// - docker: If set, launch agents as docker containers instead of child
+//   processes
 // - range: Inclusive range of TCP ports to use for agents
+// - storage: MongoDB instance used for data storage
+// - ca: If set to a valid CA x509 certificate ( PEM format ) the process
+//   will run in 'secure' mode; in this setup all operations will require
+//   a valid client certificate signed by the CA; the client cert must be
+//   provided in PEM format/base64 encoded using the HTTP header X-BUDA-Client
 BudaManager.DEFAULTS = {
   home:    '/var/run',
   port:    8100,
   docker:  false,
   range:   '2810-2890',
-  storage: 'localhost:27017/buda'
+  storage: 'localhost:27017/buda',
+  ca:      false
 };
 
 // Apply verifications to the home/working directory
@@ -104,9 +183,9 @@ BudaManager.prototype._verifyHome = function() {
     if( ! fs.statSync( this.config.home ).isDirectory() ) {
       throw new Error( 'Home directory does not exist' );
     }
-  } catch( e ) {
+  } catch( err ) {
     this.logger.fatal( 'Home directory does not exist' );
-    process.exit();
+    this.emit( 'error', err );
   }
 
   this.logger.debug( 'Check home directory is readable and writeable' );
@@ -114,8 +193,152 @@ BudaManager.prototype._verifyHome = function() {
     fs.accessSync( this.config.home, fs.R_OK | fs.W_OK );
   } catch( err ) {
     this.logger.fatal( err, 'Invalid permissions' );
-    process.exit();
+    this.emit( 'error', err );
   }
+};
+
+// Validate the provided CA to run in secure mode
+BudaManager.prototype._validateCA = function() {
+  var self = this;
+
+  self.logger.debug( 'Check CA file exists and is accesible' );
+  try {
+    fs.accessSync( self.config.ca, fs.R_OK );
+  } catch( err ) {
+    self.logger.fatal( err, 'Invalid permissions' );
+    self.emit( 'error', err );
+  }
+
+  // openssl x509 -in FILE -noout -purpose
+  self.logger.debug( 'Check CA is a valid certificate' );
+  openssl.exec( 'x509', {
+    in:      self.config.ca,
+    noout:   true,
+    purpose: true
+  }, function( err, res ) {
+    if( err ) {
+      self.emit( 'error', err );
+    }
+    if( res.toString().indexOf( 'SSL client CA : Yes' ) === - 1 ) {
+      self.logger.fatal( err, 'Invalid CA file' );
+      self.emit( 'error', new Error( 'Invalid CA file' ) );
+    }
+  });
+};
+
+// Validate the provided client certificate
+BudaManager.prototype._validateClientCert = function( data, cb ) {
+  var self = this;
+  var md5 = crypto.createHash( 'md5' );
+  var cert = new Buffer( data, 'base64' ).toString();
+  var dates = [];
+  var tmp;
+
+  // Insecure mode? Do nothing!
+  if( ! self.config.ca ) {
+    return cb( null );
+  }
+
+  // Write cert to tmp file
+  md5.update( cert );
+  tmp = md5.digest( 'hex' );
+  fs.writeFileSync( path.join( os.tmpdir(), tmp ), cert );
+
+  async.waterfall( [
+    // Validate cert
+    // openssl x509 -in client.crt -noout -purpose
+    function( next ) {
+      self.logger.debug( 'Check an actual certificate is provided' );
+      openssl.exec( 'x509', {
+        in:      path.join( os.tmpdir(), tmp ),
+        noout:   true,
+        purpose: true
+      }, function( err, res ) {
+        if( err ) {
+          self.logger.error( 'Invalid client certificate' );
+          return next({
+            error: true,
+            desc:  'INVALID_CLIENT_CERTIFICATE'
+          });
+        }
+        if( res.toString().indexOf( 'SSL client : Yes' ) === - 1 ) {
+          self.logger.error( 'Invalid client certificate' );
+          return next({
+            error: true,
+            desc:  'INVALID_CLIENT_CERTIFICATE'
+          });
+        }
+        next( null );
+      });
+    },
+    // Check if CA sign the certificate
+    // openssl verify -CAfile customCA.crt client.crt
+    function( next ) {
+      var check;
+      var cmd = 'openssl verify -CAfile ' + self.config.ca + ' ';
+
+      self.logger.debug( 'Check certificate is signed by the used CA' );
+      check = execSync( cmd + path.join( os.tmpdir(), tmp ) );
+      if( check.toString().indexOf( 'OK' ) === - 1 ) {
+        self.logger.error( 'Unsigned client certificate' );
+        return next({
+          error: true,
+          desc:  'UNSIGNED_CLIENT_CERTIFICATE'
+        });
+      }
+      next( null );
+    },
+    // Check certificate dates
+    // openssl x509 -in client.crt -noout -dates
+    function( next ) {
+      self.logger.debug( 'Check certificate dates' );
+      openssl.exec( 'x509', {
+        in:    path.join( os.tmpdir(), tmp ),
+        noout: true,
+        dates: true
+      }, function( err, res ) {
+        if( err ) {
+          self.logger.error( 'Invalid client certificate' );
+          return next({
+            error: true,
+            desc:  'INVALID_CLIENT_CERTIFICATE'
+          });
+        }
+
+        // Extract dates
+        _.each( res.toString().trim().split( '\n' ), function( v ) {
+          dates.push( v.split( '=' )[ 1 ] );
+        });
+
+        // Start date is on the future
+        if( new Date( dates[ 0 ] ) > new Date() ) {
+          self.logger.error( 'Future client certificate' );
+          return next({
+            error: true,
+            desc:  'FUTURE_CLIENT_CERTIFICATE'
+          });
+        }
+
+        // Expiration date is on the past
+        if( new Date( dates[ 1 ] ) < new Date() ) {
+          self.logger.error( 'Expired client certificate' );
+          return next({
+            error: true,
+            desc:  'EXPIRED_CLIENT_CERTIFICATE'
+          });
+        }
+
+        next( null );
+      });
+    }
+  ], function( err ) {
+    fs.unlink( path.join( os.tmpdir(), tmp ) );
+    if( err ) {
+      return cb( err );
+    }
+    self.logger.debug( 'Valid client certificate' );
+    return cb( null );
+  });
 };
 
 // Setup REST interface
@@ -131,131 +354,211 @@ BudaManager.prototype._startInterface = function() {
   // Attach REST routes to commands
   this.restapi.route( [
     {
-      method:  'GET',
-      path:    '/ping',
+      method: 'GET',
+      path:   '/ping',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Healt check' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
-        reply( 'pong' );
-      }
-    },
-    {
-      method:  'GET',
-      path:    '/',
-      handler: function( request, reply ) {
-        self.logger.info( 'Request: Retrieve dataset list' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
-        self._getDatasetList( function( res ) {
-          reply( res );
+        var cert = request.headers[ 'x-buda-client' ] || '';
+
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Healt check' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+          reply( 'pong' );
         });
       }
     },
     {
-      method:  'GET',
-      path:    '/{id}',
+      method: 'GET',
+      path:   '/',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Retrieve dataset details' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
-        self._getDatasetDetails( request.params.id, function( res ) {
-          reply( res );
+        var cert = request.headers[ 'x-buda-client' ] || '';
+
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Retrieve dataset list' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+          self._getDatasetList( function( res ) {
+            reply( res );
+          });
         });
       }
     },
     {
-      method:  'PUT',
-      path:    '/{id}',
+      method: 'GET',
+      path:   '/{id}',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Update dataset' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
+        var cert = request.headers[ 'x-buda-client' ] || '';
 
-        // Parse dataset declaration if using YAML format
-        if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.dataset = YAML.parse( request.payload.dataset );
-        }
-
-        self._updateDataset( request.params.id, request.payload.dataset, function( res ) {
-          reply( res );
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Retrieve dataset details' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+          self._getDatasetDetails( request.params.id, function( res ) {
+            reply( res );
+          });
         });
       }
     },
     {
-      method:  'PATCH',
-      path:    '/{id}',
+      method: 'PUT',
+      path:   '/{id}',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Update dataset' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
+        var cert = request.headers[ 'x-buda-client' ] || '';
 
-        // Parse dataset declaration if using YAML format
-        if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.dataset = YAML.parse( request.payload.dataset );
-        }
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Update dataset' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
 
-        self._updateDataset( request.params.id, request.payload.dataset, function( res ) {
-          reply( res );
+          // Parse dataset declaration if using YAML format
+          if( request.payload.format && request.payload.format === 'yaml' ) {
+            request.payload.dataset = YAML.parse( request.payload.dataset );
+          }
+
+          self._updateDataset( request.params.id, request.payload.dataset, function( r ) {
+            reply( r );
+          });
         });
       }
     },
     {
-      method:  'DELETE',
-      path:    '/{id}',
+      method: 'PATCH',
+      path:   '/{id}',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Delete dataset' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
-        self._deleteDataset( request.params.id, function( res ) {
-          reply( res );
+        var cert = request.headers[ 'x-buda-client' ] || '';
+
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Update dataset' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+
+          // Parse dataset declaration if using YAML format
+          if( request.payload.format && request.payload.format === 'yaml' ) {
+            request.payload.dataset = YAML.parse( request.payload.dataset );
+          }
+
+          self._updateDataset( request.params.id, request.payload.dataset, function( r ) {
+            reply( r );
+          });
         });
       }
     },
     {
-      method:  'POST',
-      path:    '/',
+      method: 'DELETE',
+      path:   '/{id}',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.info( 'Request: Create dataset' );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
+        var cert = request.headers[ 'x-buda-client' ] || '';
 
-        // Parse dataset declaration if using YAML format
-        if( request.payload.format && request.payload.format === 'yaml' ) {
-          request.payload.dataset = YAML.parse( request.payload.dataset );
-        }
-
-        self._registerDataset( request.payload.dataset, function( res ) {
-          reply( res );
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Delete dataset' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+          self._deleteDataset( request.params.id, function( res ) {
+            reply( res );
+          });
         });
       }
     },
     {
-      method:  '*',
-      path:    '/{p*}',
+      method: 'POST',
+      path:   '/',
+      config: {
+        security: true
+      },
       handler: function( request, reply ) {
-        self.logger.warn( 'Bad request: %s %s', request.method, request.path );
-        self.logger.debug({
-          params:  request.params,
-          headers: request.headers
-        }, 'Request details' );
-        reply({
-          error: true,
-          desc:  'INVALID_REQUEST'
+        var cert = request.headers[ 'x-buda-client' ] || '';
+
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.info( 'Request: Create dataset' );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+
+          // Parse dataset declaration if using YAML format
+          if( request.payload.format && request.payload.format === 'yaml' ) {
+            request.payload.dataset = YAML.parse( request.payload.dataset );
+          }
+
+          self._registerDataset( request.payload.dataset, function( res ) {
+            reply( res );
+          });
+        });
+      }
+    },
+    {
+      method: '*',
+      path:   '/{p*}',
+      config: {
+        security: true
+      },
+      handler: function( request, reply ) {
+        var cert = request.headers[ 'x-buda-client' ] || '';
+
+        self._validateClientCert( cert, function( e ) {
+          if( e ) {
+            return reply( e );
+          }
+          self.logger.warn( 'Bad request: %s %s', request.method, request.path );
+          self.logger.debug({
+            params:  request.params,
+            headers: request.headers
+          }, 'Request details' );
+          reply({
+            error: true,
+            desc:  'INVALID_REQUEST'
+          });
         });
       }
     }
@@ -265,90 +568,42 @@ BudaManager.prototype._startInterface = function() {
   this.restapi.start( function( err ) {
     if( err ) {
       self.logger.fatal( err );
-      throw err;
+      self.emit( 'error', err );
     }
   });
 };
 
 // Starts a new dataset agent
-/* eslint complexity:0 */
 BudaManager.prototype._startAgent = function( dataset ) {
   var self = this;
-  var cmd;
-  var seed;
   var agent;
-  var portsRange;
 
   // Use manager storage as the agent's if no host is specified
   if( ! _.has( dataset.data.storage, 'host' ) ) {
     dataset.data.storage.host = this.config.storage;
   }
 
-  // Start agent as a container if running in 'docker' mode
   if( self.config.docker ) {
-    // Set default port to the one exposed on the docker image; it will
-    // be dynamically mapped on launch
-    if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
-      dataset.data.hotspot.location = 8200;
-    }
-
-    // Create docker launch command
-    cmd = 'docker run -dP --name ' + dataset.data.storage.collection + ' ';
-    if( dataset.extras.docker.links ) {
-      _.each( dataset.extras.docker.links, function( el ) {
-        cmd += '--link ' + el + ' ';
-      });
-    }
-    cmd += dataset.extras.docker.image + ' ';
-    cmd += "--conf '" + JSON.stringify( dataset.data ) + "'";
-
-    // Start container and use the hash returned as ID
-    agent = execSync( cmd ).toString().substr( 0, 12 );
+    // Start agent as a container if running in 'docker' mode
+    agent = _startContainer( dataset );
     self.logger.info( 'Starting container agent: %s', agent );
     self.logger.debug({
-      configuration: dataset.data,
-      cmd:           cmd
+      configuration: dataset.data
     }, 'Starting container agent: %s', agent );
-
     self.agents[ dataset.extras.id ] = agent;
-    return;
+  } else {
+    // Star agent as subprocess
+    agent = _startSubProcess( dataset, self.config );
+    self.logger.info( 'Starting subprocess agent: %s', agent.pid );
+    self.logger.debug({
+      configuration: dataset.data
+    }, 'Starting agent: %s', agent.pid );
+    self.agents[ dataset.extras.id ] = agent.pid;
   }
 
-  // Start agent as a sub-process
-  // Randomly find a port in the provided range if required
-  if( dataset.data.hotspot.type === 'tcp' && ! dataset.data.hotspot.location ) {
-    portsRange = this.config.range.split( '-' );
-    portsRange[ 0 ] = Number( portsRange[ 0 ] );
-    portsRange[ 1 ] = Number( portsRange[ 1 ] );
-    seed = Math.random() * ( portsRange[ 1 ] - portsRange[ 0 ] ) + portsRange[ 0 ];
-    dataset.data.hotspot.location = Math.floor( seed );
+  if( agent.stdout ) {
+    agent.stdout.pipe( process.stdout );
   }
-
-  // Sub-process setup
-  cmd = dataset.extras.handler || 'buda-agent-' + dataset.data.format;
-  if( dataset.extras.handler ) {
-    cmd = dataset.extras.handler;
-  }
-
-  // Create agent
-  agent = spawn( cmd, ['--conf', JSON.stringify( dataset.data ) ] );
-  self.logger.info( 'Starting agent: %s', agent.pid );
-  self.logger.debug({
-    configuration: dataset.data,
-    cmd:           cmd
-  }, 'Starting agent: %s', agent.pid );
-
-  // Add agent and attach process PID to the dataset
-  self.agents[ dataset.extras.id ] = agent.pid;
-
-  // Catch information on the agent output
-  agent.stdout.on( 'data', function( msg ) {
-    try {
-      self.logger.debug( msg.toString() );
-    } catch( e ) {
-      self.logger.error( e );
-    }
-  });
 };
 
 // Stops a given dataset agent
@@ -454,13 +709,13 @@ BudaManager.prototype._registerDataset = function( dataset, cb ) {
   // Check dataset details are present
   if( ! dataset ) {
     this.logger.warn( 'Missing parameters' );
-    return { error: true, desc: 'MISSING_PARAMETERS' };
+    return cb({ error: true, desc: 'MISSING_PARAMETERS' });
   }
 
   // Not supported schema version?
   if( ! this.schemas[ 'dataset-' + dataset.version ] ) {
     this.logger.error( 'Unsupported schema version' );
-    return { error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' };
+    return cb({ error: true, desc: 'UNSUPPORTED_SCHEMA_VERSION' });
   }
 
   // Validate dataset against the schema version used
@@ -479,7 +734,7 @@ BudaManager.prototype._registerDataset = function( dataset, cb ) {
   dataset.metadata.modified = new Date( dataset.metadata.modified || Date.now() );
 
   // Calculate ID
-  dataset.extras.id = getID( dataset );
+  dataset.extras.id = _getID( dataset );
 
   // Start dataset agent
   this._startAgent( dataset );
@@ -522,7 +777,7 @@ BudaManager.prototype.exit = function() {
         });
       }
       self.logger.info( 'Exiting Manager' );
-      process.exit();
+      self.emit( 'exit' );
     });
   });
 };
@@ -535,7 +790,7 @@ BudaManager.prototype.start = function() {
   // Looking for help ?
   if( _.has( self.config, 'h' ) || _.has( self.config, 'help' ) ) {
     self.printHelp();
-    process.exit();
+    self.emit( 'exit' );
   }
 
   // Log config
@@ -559,7 +814,7 @@ BudaManager.prototype.start = function() {
   });
   mongoose.connection.on( 'error', function( err ) {
     self.logger.fatal( err );
-    process.exit();
+    self.emit( 'error', err );
   });
 
   // Load schemas
@@ -579,6 +834,12 @@ BudaManager.prototype.start = function() {
   // Home directory validations
   self.logger.info( 'Verifying working directory' );
   self._verifyHome();
+
+  // CA validations
+  if( self.config.ca ) {
+    self.logger.info( 'Verifying CA for secure mode' );
+    self._validateCA();
+  }
 
   // Move process to working directory
   self.logger.info( 'Moving process to working directory' );
@@ -602,6 +863,9 @@ BudaManager.prototype.start = function() {
 
   // Log final output
   self.logger.info( 'Initialization process complete' );
+  if( self.config.ca ) {
+    self.logger.info( 'Running in SECURE mode' );
+  }
 
   // Listen for interruptions and gracefully shutdown
   process.stdin.resume();

@@ -15,10 +15,12 @@ metadata:
   accessLevel: public
 data:
   format: xml
-  compression: none
+  compression: gzip
+  update: replace
   storage:
     collection: calidadAire
     index: _id
+    batch: 1
   hotspot:
     type: tcp
     location: ''

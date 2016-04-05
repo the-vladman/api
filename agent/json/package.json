@@ -1,6 +1,6 @@
 {
   "name": "buda-agent-json",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Buda Agent for JSON processing",
   "scripts": {
     "test": "npm test"

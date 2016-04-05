@@ -1,6 +1,6 @@
 {
   "name": "buda-agent",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Base template for Buda Agents",
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",
@@ -9,9 +9,12 @@
     "url": "https://github.com/mxabierto/buda.git"
   },
   "dependencies": {
+    "async": "=1.5.2",
+    "bunyan": "=1.7.1",
+    "byline": "=4.2.1",
     "minimist": "=1.2.0",
     "mongoose": "=4.3.7",
-    "underscore": "=1.8.3",
-    "byline": "=4.2.1"
+    "node-uuid": "=1.4.7",
+    "underscore": "=1.8.3"
   }
 }

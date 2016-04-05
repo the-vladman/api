@@ -1,8 +1,18 @@
 // Buda Agent
 // ==========
-// Base template of a buda agent; should be extended on
-// specific implementations.
+// Base template of a buda agent; should be extended on specific implementations.
 //
+// Events emitted:
+// - error
+// - exit
+// - ready
+// - batch
+// - client:open
+// - client:close
+// - flow:start
+// - flow:end
+//
+// Extend:
 // function CustomAgent( conf ) {
 //   BudaAgent.call( this, conf );
 //
@@ -17,38 +27,47 @@
 var _ = require( 'underscore' );
 var net = require( 'net' );
 var util = require( 'util' );
+var uuid = require( 'node-uuid' );
+var async = require( 'async' );
 var zlib = require( 'zlib' );
+var bunyan = require( 'bunyan' );
 var mongoose = require( 'mongoose' );
 var events = require( 'events' );
 
 // Constructor
 // Configuration parameters expected should match the 'dataset.data' attribute
 // according to the supported dataset schema version
-function BudaAgent( conf ) {
+function BudaAgent( conf, handlers ) {
   // Process each data packet received
   this.parser = null;
 
   // Readable stream opened against the agent's endpoint
   this.incoming = null;
 
+  // Store configuration options
+  this.config = conf;
+
+  // Internal agent state
+  this.currentState = {
+    creationDate:   new Date(),
+    lastUpdate:     null,
+    batchCounter:   0,
+    recordsCounter: 0
+  };
+
   // Location to listen for incoming data packets
   this.endpoint = conf.hotspot.location;
 
-  // Configuration parameters
-  this.config = conf;
-  if( ! _.has( this.config, 'compression' ) ) {
-    this.config.compression = 'none';
-  }
+  // Logging interface
+  this.logger = bunyan.createLogger({
+    name:   conf.storage.collection,
+    stream: process.stdout,
+    level:  'debug'
+  });
 
-  // Add a data decompressor if required
-  switch( this.config.compression ) {
-    case 'gzip':
-      this.decrompressor = zlib.createGunzip();
-      break;
-    case 'none':
-    default:
-      this.config.compression = 'none';
-      this.decrompressor = null;
+  // Attach event handlers if provided
+  if( handlers && _.isObject( handlers ) ) {
+    this.attachHandlers( handlers );
   }
 
   // Configure schema and base data model for storage
@@ -66,6 +85,11 @@ function BudaAgent( conf ) {
 // Add event emitter capabilities
 util.inherits( BudaAgent, events.EventEmitter );
 
+// This is the maximum time in ms that can elapse between batches storage
+// before it counts as a new update entirely; this may be adjusted to account
+// for network latency
+BudaAgent.UPDATE_PASS_LENGTH = 2000;
+
 // Start listening for data on the endpoint
 // For tests you can run:
 // cat datafile | nc localhost PORT
@@ -73,58 +97,102 @@ util.inherits( BudaAgent, events.EventEmitter );
 BudaAgent.prototype.start = function() {
   var self = this;
   var finalPass = false;
+  var decompressor;
 
   // Check a valid parser is set
   if( ! this.parser ) {
-    throw new Error( 'No parser set for the agent' );
+    this.emit( 'error', new Error( 'No parser set for the agent' ) );
   }
 
   // Connect to data storage
   this.connectStorage();
 
   // Store records setup
-  // Since we're using "end:false" as piping option some parsers
-  // don't emit the 'end' event and some entries are not being stored;
-  // using a timer we manually emit the event once per data upload
-  self.on( 'record', function( bag ) {
+  // Since we're using "end:false" as piping option some parsers don't emit
+  // the 'end' event; using a timer we manually emit the event once per data upload
+  self.on( 'batch', function( bag ) {
+    // Increase counters
+    self.currentState.batchCounter += 1;
+    self.currentState.recordsCounter += bag.length;
+
     // Clear previous timer if any
     if( finalPass ) {
       clearTimeout( finalPass );
+    } else {
+      self.emit( 'flow:start', self.currentState );
     }
 
     // Setup final pass timer
     finalPass = setTimeout( function() {
+      self.currentState.lastUpdate = new Date();
       self.parser.emit( 'end' );
+      self.emit( 'flow:end', self.currentState );
       clearTimeout( finalPass );
-    }, 2000 );
+      finalPass = null;
+    }, BudaAgent.UPDATE_PASS_LENGTH );
 
     // Store bag of records
     self.model.collection.insert( bag, function( err ) {
       if( err ) {
-        throw err;
+        self.emit( 'error', err );
       }
     });
   });
 
-  // Handle errors
-  self.on( 'error', function( err ) {
-    throw err;
-  });
-
   // Create server
   self.incoming = net.createServer( function( socket ) {
-    if( self.config.compression !== 'none' ) {
-      socket
-        .pipe( self.decrompressor, { end: false })
-        .pipe( self.parser, { end: false });
-    } else {
-      socket.pipe( self.parser, { end: false });
-    }
+    async.waterfall( [
+      // Cleanup data if required
+      function( next ) {
+        if( self.config.update === 'replace' ) {
+          self.logger.info( 'Cleanup' );
+          self.model.collection.remove({}, function() {
+            next( null );
+          });
+        } else {
+          next( null );
+        }
+      },
+      // Setup client
+      function( next ) {
+        // Attach client ID
+        socket.id = uuid.v4();
+
+        if( self.config.compression !== 'none' ) {
+          // Create decompressor
+          switch( self.config.compression ) {
+            default:
+            case 'gzip':
+              decompressor = zlib.createGunzip();
+              break;
+          }
+
+          socket
+            .pipe( decompressor, { end: false })
+            .pipe( self.parser, { end: false });
+        } else {
+          socket.pipe( self.parser, { end: false });
+        }
+
+        // Notify client closed
+        socket.on( 'close', function() {
+          self.emit( 'client:close', this );
+        });
+
+        // Notify client connection
+        self.emit( 'client:open', socket );
+        next( null );
+      }
+    ], function( err ) {
+      if( err ) {
+        self.emit( 'error', err );
+      }
+    });
   });
 
   // Start listening for data
   self.incoming.listen( self.endpoint, function() {
-    self.log( 'Agent ready' );
+    self.emit( 'ready' );
   });
 };
 
@@ -141,23 +209,30 @@ BudaAgent.prototype.exit = function() {
   // Custom cleanup process
   this.cleanup();
 
-  // Exit entirely
-  /* eslint no-process-exit:0 */
-  process.exit();
+  // Exit
+  this.emit( 'exit' );
 };
 
-// Cleanup procedure
-// Just logging message by default, could be implemented based on
-// the custom agent specific requirements
+// Cleanup
 BudaAgent.prototype.cleanup = function() {
   return;
 };
 
-// Data transform procedure
-// Just logging message by default, could be implemented based on
-// the custom agent specific requirements
+// Data transform
 BudaAgent.prototype.transform = function( record ) {
   return record;
+};
+
+// Utility method to attach a set of event handlers at once
+BudaAgent.prototype.attachHandlers = function( handlers ) {
+  var self = this;
+
+  _.each( handlers, function( v, k ) {
+    // Just attach valid functions
+    if( _.isFunction( v ) ) {
+      self.on( k, v );
+    }
+  });
 };
 
 // Stablish a connection with the used data storage
@@ -166,23 +241,12 @@ BudaAgent.prototype.connectStorage = function() {
 
   // No storage located? exit with error
   if( ! storage ) {
-    throw new Error( 'No storage available' );
+    this.emit( 'error', new Error( 'No storage available' ) );
   }
 
   // Append selected DB if required and connect
   mongoose.connect( 'mongodb://' + storage );
   return;
-};
-
-// Logs are sent directly to stdout as JSON message; if a string is used
-// as parameter a minimal wrap object is used for it, time is automatically
-// added to all messages
-/* eslint no-param-reassign:0 */
-BudaAgent.prototype.log = function( msg ) {
-  if( _.isObject( msg ) ) {
-    msg = JSON.stringify( msg );
-  }
-  process.stdout.write( msg );
 };
 
 module.exports = BudaAgent;

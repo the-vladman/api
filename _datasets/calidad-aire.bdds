@@ -17,9 +17,11 @@ metadata:
 data:
   format: csv
   compression: none
+  update: replace
   storage:
     collection: calidadAire
     index: station.id
+    batch: 10
   hotspot:
     type: tcp
     location: ''

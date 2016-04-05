@@ -13,10 +13,12 @@
   },
   "data": {
     "format": "jsonl",
-    "compression": "none",
+    "compression": "gzip",
+    "update": "replace",
     "storage": {
       "collection": "lines",
-      "index": "_id"
+      "index": "_id",
+      "batch": 5
     },
     "hotspot": {
       "type": "tcp",
