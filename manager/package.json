@@ -1,6 +1,6 @@
 {
   "name": "buda-manager",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Manager process for the 'BUDA' platform",
   "author": "Ben Cessa <ben@pixative.com>",
   "license": "MIT",

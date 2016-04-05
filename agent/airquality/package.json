@@ -1,6 +1,6 @@
 {
   "name": "google-airquality",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Buda Agent to parse CSV feeds into the Google Air Quailty Feed spec v0.9",
   "scripts": {
     "test": "npm test"
