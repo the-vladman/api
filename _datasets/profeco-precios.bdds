@@ -1,0 +1,35 @@
+version: '0.1'
+metadata:
+  title: Profeco
+  description: Quien es quien en los precios
+  keyword:
+    - profeco
+    - precios
+    - consumidor
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Carlos Maya
+  contactEmail: carlos.maya.ramirez@gmail.com
+  accessLevel: public
+data:
+  format: csv
+  compression: gzip
+  update: replace
+  storage:
+    collection: profeco.precios
+    index: _id
+    batch: 100
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+    separator: ','
+    escapeChar: '"'
+    enclosedChar: '"'
+extras:
+  docker:
+    image: mxabierto/buda-agent-csv
+    links:
+      - buda-storage:storage
