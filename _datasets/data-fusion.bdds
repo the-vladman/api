@@ -25,6 +25,7 @@ data:
     type: tcp
     location: ''
   options:
+    pointer: *
 extras:
   docker:
     image: mxabierto/buda-agent-json
