@@ -20,6 +20,7 @@ data:
   storage:
     collection: data-fusion
     index: _id
+    batch: 100
   update: replace
   hotspot:
     type: tcp
