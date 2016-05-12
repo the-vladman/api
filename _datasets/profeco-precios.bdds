@@ -16,7 +16,7 @@ metadata:
 data:
   format: csv
   compression: gzip
-  update: replace
+  update: merge
   storage:
     collection: profeco.precios
     index: _id
