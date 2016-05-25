@@ -30,8 +30,7 @@ __Datasets:__ csv_sample.bdds
 
 Entradas independientes en el catálogo de datos; se describen mediante un archivo
 de especifición ( JSON o YAML ); estos archivos son utilizados por el manager para
-crear agentes; un agente es asignado a cada dataset; a cada dataset es asignado
-un ID que se calcula como un SHA a partir del archivo utilizado para crearlo
+crear agentes; a cada dataset son asignados un agente y un ID que se calcula como un SHA a partir del archivo utilizado para crearlo
 
 __Agents:__ buda-agent-{data.type}
 
@@ -58,8 +57,8 @@ __Front:__ buda-front
 
 Ademas del manager, front es el otro proceso de primer nivel en la plataforma; se
 encarga de presentar una interfaz de consumo mediante HTTP/S al usuario para realizar
-consultas de toda la información procesada y almancenada en los distintas datasets que
-conformán el catálogo
+consultas de toda la información procesada y almancenada en los distintos datasets que
+conforman el catálogo
 
 ### FAQ
 
@@ -104,7 +103,7 @@ para poder trabajar con grandes cargas de datos
   Ruby, Go, etc
 - En una versión para producción los agentes incluso pueden desplegarse como containers
   en el cluster de forma relativamente sencilla
-- Los datasets son solo un archivo JSON/YAML por lo que implementar herramientas visuales para
+- Los datasets son sólo un archivo JSON/YAML por lo que implementar herramientas visuales para
   diseñarlos es trivial
 - Ya que los datasets son archivos de texto plano se puede montar un sistema de entrega continua
   de forma sencilla, por ejemplo: se almacenan en un repositorio Git, se configuran
@@ -116,9 +115,9 @@ para poder trabajar con grandes cargas de datos
   utilizado para recibir datos; estos endpoints pueden ser UNIX sockets, TCP sockets o
   algun otro mecanismo más avanzando ( por ejemplo torrents para implementarse como sistemas
   realmente descentralizados :sunglasses: )
-- En caso de utilizar UNIX sockets se pueden "montar" en la maquina local de forma segura
-  utilizando un SSH tunnel; en caso de sockets TCP se pueden implementar de forma segura
+- En caso de utilizar UNIX sockets, se pueden "montar" en la maquina local de forma segura
+  utilizando un SSH tunnel. En caso de sockets TCP se pueden implementar de forma segura
   mediante conexiones HTTPS
 - Una vez creado el dataset se pueden implementar herramientas visuales tipo drag & drop para
-  enviar datos de forma sencilla ya que lo único que la herramienta debe hacer es iniciar
+  enviar datos de forma sencilla, ya que lo único que la herramienta debe hacer es iniciar
   el streaming de paquetes hacia el hotspot utilizado
