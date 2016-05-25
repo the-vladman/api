@@ -17,7 +17,7 @@ BUDA_FRONT_ACCESS/API_VERSION/data.collection/doc.id
 
 Donde:
 
-- __BUDA_FRONT_ACCESS__: Protocolo + IP/dominio + puerto donde el proceso front esta e scuchando por peticiones
+- __BUDA_FRONT_ACCESS__: Protocolo + IP/dominio + puerto donde el proceso front esta escuchando por peticiones
 - __data.collection__: Colección de datos sobre la cual se esté trabajando
 - __doc.id__: ID del documento específico sobre el cual se esté trabajando, en caso de ser relevante para la operación en cuestión
 
@@ -33,7 +33,7 @@ Otras consideraciones importantes:
 - Todas las operaciones que esperan datos ( PUT y POST ) los esperan en JSON
 - Todas las fechas seran devueltas en __UTC__ y utilizando el formato __ISO 8601__
 - Todas las operaciones esperan y devuelven datos en UTF8 mediante los encabezados adecuados: __Content-Type: application/json; charset=utf-8__
-- Todas las operaciones deberán ser debidamente validadas; para mas información consultar el apartado _'SEGURIDAD'_; la única excepción serán las consultas ( operaciones GET ) a colecciones de datos marcadas como _públicas_
+- Todas las operaciones deberán ser debidamente validadas. Para mas información consultar el apartado _'SEGURIDAD'_; la única excepción serán las consultas ( operaciones GET ) a colecciones de datos marcadas como _públicas_
 
 ## Respuestas
 Todas las operaciones de creación/edición de contenido responden para operaciones exitosas el recurso sobre el cual se realizo la operación.
@@ -89,13 +89,13 @@ Todas las operaciones que se determinan en alguna condición de error regresan u
 ### GET
 Las consultas deberán ser realizadas contra el recurso de la colección de datos sobre la que se este trabajando y las condiciones ser expresadas como parte de la __cadena de consulta__ [Query String*](https://en.wikipedia.org/wiki/Query_string).
 
-Para expresar condiciones mas complejas que la igualdad absoluta se podran utilizar los siguientes operadores:
+Para expresar condiciones mas complejas que la igualdad absoluta, se pueden utilizar los siguientes operadores:
 
 ```
 * Igualdad
 key=val
 
-* Comparasión
+* Comparación
 key=[gt:x]
 key=[gte:x]
 key=[lt:x]
@@ -121,17 +121,17 @@ $not=[cond|cond]
 ```
 
 ### POST
-- La ruta especifica solo la colección de datos a utilizar para almacenar el documento enviado.
-- Los datos para almacenamiento se envian en el _Request Body_.
+- La ruta específica solo la colección de datos a utilizar para almacenar el documento enviado.
+- Los datos para almacenamiento se envían en el _Request Body_.
 - La respuesta es el documento completo tal como fue registrado por el servicio.
 
 ### PUT
-- La ruta especifica la colección de datos a utilizar y el ID del documento que será actualizado.
+- La ruta específica la colección de datos a utilizar y el ID del documento que será actualizado.
 - Los datos para actualización se envian en el _Request Body_.
 - La respuesta es el documento completo tal como fue actualizado por el servicio.
 
 ### DELETE
-- La ruta especifica la colección de datos a utilizar y el ID del documento que será eliminado.
+- La ruta específica la colección de datos a utilizar y el ID del documento que será eliminado.
 - La respuesta es el documento completo que fue eliminado por el servicio.
 
 ## Seguridad
@@ -143,10 +143,10 @@ Todos los datos manejados por el proceso deberán operarse de forma segura, para
 
 Algunos aspectos importantes a destacar de este proceso:
 
-- Tanto el usuario como el servicio generán de forma autónoma, secreta y (potencialmente) segura sus propias llaves RSA.
+- Tanto el usuario como el servicio generan de forma autónoma, secreta y (potencialmente) segura sus propias llaves RSA.
 - El intercambio se realiza con la parte pública de ambas partes asi que las llaves privadas no necesitan ser enviadas por la red en ningún momento.
 
-Al finalizar el proceso las llaves privadas seran utilizadas en  cada endpoint para generar firmas electronicas de la información intercambiada y las llaves públicas para validar dichas firmas apropiadamente.
+Al finalizar el proceso las llaves privadas serán utilizadas en cada endpoint para generar firmas electronicas de la información intercambiada y las llaves públicas para validar dichas firmas apropiadamente.
 
 ### Consumer ID
 El identificador único por cada consumer se trata de un Identificador Único Universal versión 4 [(UUID)](https://tools.ietf.org/html/rfc4122)
@@ -168,11 +168,11 @@ SURBUUFCCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=
 ```
 
 ### Request Signature
-Todas las peticiones deberan ser firmadas digitalmente para validar la autenticidad, integridad y origen de la información de forma bidireccional: información del usuario hacia el servico y del servicio hacia el usuario.
+Todas las peticiones deberán ser firmadas digitalmente para validar la autenticidad, integridad y origen de la información de forma bidireccional: información del usuario hacia el servico y del servicio hacia el usuario.
 
 La firma de las peticiones se calcula de la siguiente forma:
 
-- Se obtiene un hash SHA1 de la información a ser intercambiada; son los datos de entrada o salida excepto en las peticiones de consulta (GET), en ese caso la información enviada por el usuario es la __cadena de consulta__; los primeros 10 caractéres del hash se utilizaran como __código de referencia__.
+- Se obtiene un hash SHA1 de la información a ser intercambiada; son los datos de entrada o salida excepto en las peticiones de consulta (GET), en ese caso la información enviada por el usuario es la __cadena de consulta__; los primeros 10 caracteres del hash se utilizaran como __código de referencia__.
 
 Calcular código de referencia:
 
@@ -180,7 +180,7 @@ Calcular código de referencia:
 echo -n "json codificado" | openssl sha1 | cut -c1-10
 ```
 
-- Utilizando el código de referencia se genera una firma electrónica utilizando la llave privada, esta firma sera enviada a la contraparte codificada en __base64__.
+- Utilizando el código de referencia se genera una firma electrónica utilizando la llave privada, esta firma será enviada a la contraparte codificada en __base64__.
 
 Generación de una firma utilizando la llave privada:
 
@@ -188,7 +188,7 @@ Generación de una firma utilizando la llave privada:
 echo -n "2702eff870" | openssl rsautl -sign -inkey priv | base64
 ```
 
-- La contraparte validará la firma recalculando el hash y verificandola con la llave pública correspondiente.
+- La contraparte validará la firma recalculando el hash y verificándola con la llave pública correspondiente.
 
 Validación de una firma utilizando la llave pública:
 
@@ -205,7 +205,7 @@ Todas las operaciones deben ser autenticadas utilizando encabezados HTTP con los
 - __BUDA-Request-Signature__: Firma del mensaje
 
 
-En el caso del header __BUDA-Consumer-Key__ deberá incluir el fingerprint de la llave utilizada, separado por bloques y en mayúsculas; por ejemplo:
+En el caso del header __BUDA-Consumer-Key__ deberá incluir el fingerprint de la llave utilizada, separado por bloques y en mayúsculas, por ejemplo:
 
 ```
 B2:FD:48:9A:0F:FC:12:9B:72:F4:83:86:BD:C2:09:73
