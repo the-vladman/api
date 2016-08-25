@@ -18,6 +18,8 @@ data:
   storage:
     collection: gobmx.facts
     index: slug
+    batch: 100
+  update: replace
   hotspot:
     type: tcp
     location: ''
