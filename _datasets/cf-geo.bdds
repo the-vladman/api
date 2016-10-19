@@ -19,6 +19,7 @@ data:
     batch: 1
     collection: cf.geo
     index: id
+  update: replace
   hotspot:
     type: tcp
     location: ''

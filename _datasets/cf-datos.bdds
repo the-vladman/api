@@ -18,6 +18,8 @@ data:
   storage:
     collection: cf.datos
     index: id
+    batch: 1000
+  update: replace
   hotspot:
     type: tcp
     location: ''

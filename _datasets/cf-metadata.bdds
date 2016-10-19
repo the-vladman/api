@@ -19,6 +19,7 @@ data:
     batch: 1
     collection: cf.metadata
     index: Dependencia
+  update: replace
   hotspot:
     type: tcp
     location: ''
