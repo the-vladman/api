@@ -16,11 +16,11 @@ metadata:
 data:
   format: csv
   compression: gzip
-  update: replace
+  update: merge
   storage:
     collection: profeco.precios
     index: _id
-    batch: 100
+    batch: 200
   hotspot:
     type: tcp
     location: ''

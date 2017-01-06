@@ -15,9 +15,11 @@ metadata:
 data:
   format: csv
   compression: none
+  update: replace
   storage:
     collection: gobmx.facts
     index: slug
+    batch: 1
   hotspot:
     type: tcp
     location: ''

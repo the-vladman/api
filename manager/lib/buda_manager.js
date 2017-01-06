@@ -613,7 +613,11 @@ BudaManager.prototype._stopAgent = function( dataset ) {
   // Kill agent
   if( self.config.docker ) {
     self.logger.debug( 'Stopping container agent: %s', self.agents[ dataset.extras.id ] );
-    execSync( 'docker rm -f ' + self.agents[ dataset.extras.id ] );
+    try {
+      execSync( 'docker rm -f ' + self.agents[ dataset.extras.id ] );
+    } catch ( err ) {
+      self.logger.debug( 'Failed stopping agent: %s', self.agents[ dataset.extras.id ] );
+    }
   } else {
     self.logger.debug( 'Stopping process agent: %s', self.agents[ dataset.extras.id ] );
     try {
