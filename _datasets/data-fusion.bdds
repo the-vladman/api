@@ -1,35 +1,34 @@
 version: '0.1'
 metadata:
-  title: CF Códigos Grupos
-  description: CF Códigos Grupos
+  title: Data fusion
+  description: Fusión de datos entre ADELA + CKAN + Recomendaciones + Analytics
   keyword:
-    - crowdfunding
-    - codigos
-    - grupos
+    - ckan
+    - adela
+    - catalogos
+    - validadora
   language:
     - es-MX
   license: http://datos.gob.mx/libreusomx/
   organization: México Abierto
-  contactName: Eduardo Clark
+  contactName: Andrés Gómez Urquiza
   contactEmail: hola@datos.gob.mx
   accessLevel: public
 data:
-  format: csv
-  compression: none
+  format: json
+  compression: gzip
   storage:
+    collection: data-fusion
+    index: _id
     batch: 100
-    collection: cf.grupos
-    index: id
   update: replace
   hotspot:
     type: tcp
     location: ''
   options:
-    separator: ','
-    escapeChar: '"'
-    enclosedChar: '"'
+    pointer: '*'
 extras:
   docker:
-    image: mxabierto/buda-agent-csv
+    image: mxabierto/buda-agent-json
     links:
       - buda-storage:storage

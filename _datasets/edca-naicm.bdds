@@ -1,0 +1,33 @@
+version: '0.1'
+metadata:
+  title: Contrataciones Abiertas del NAICM
+  description: Datos de los contratos para el NAICM basado en el estándar de Contrataciones Abiertas
+  keyword:
+    - naicm
+    - ocds
+  language:
+    - es-MX
+  license: http://datos.gob.mx/libreusomx/
+  organization: México Abierto
+  contactName: Carlos Maya
+  contactEmail: carlos.maya@datos.mx
+  accessLevel: public
+data:
+  format: json
+  compression: none
+  storage:
+    collection: edca-naicm
+    index: _id
+    batch: 100
+  update: replace
+  hotspot:
+    type: tcp
+    location: ''
+  options:
+    pointer: '*'
+extras:
+  docker:
+    image: mxabierto/buda-agent-json
+    links:
+      - buda-storage:storage
+

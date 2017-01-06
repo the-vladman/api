@@ -6,6 +6,60 @@
 
 Bus de Datos Abiertos
 
+### API
+
+BUDA está disponible en `api.datos.gob.mx`
+
+El catálogo de datasets se puede consultar en `http://api.datos.gob.mx/v1/catalog.json`
+
+
+### Arquitectura
+
+__Master:__ buda
+
+Ejecutable binario que manipula proceso(s) manager; se comunica con el manager
+mediante su interfaz tipo REST
+
+__Manager:__ buda-manager
+
+Proceso que se ejecuta en modo daemon y se encarga de administrar un catálogo de datos
+formado por distintos datasets; conserva en todo momento una lista de los datasets activos
+y sus respectivos agentes
+
+__Datasets:__ csv_sample.bdds
+
+Entradas independientes en el catálogo de datos; se describen mediante un archivo
+de especifición ( JSON o YAML ); estos archivos son utilizados por el manager para
+crear agentes; a cada dataset son asignados un agente y un ID que se calcula como un SHA a partir del archivo utilizado para crearlo
+
+__Agents:__ buda-agent-{data.type}
+
+Proceso tipo de worker, se inicia por el manager y ejecuta en modo daemon;
+abre un stream de lectura en el "hotspot" marcado por su dataset y espera por datos
+de entrada; cada paquete de datos recibido es procesado y almacenado de
+acuerdo a las configuraciones de la zona; los agentes son procesos especializados
+de acuerdo al tipo de dato que se procesará en el dataset; cada dataset indica
+tambien donde debera reportar errores el agente mediante un stream de escritura
+
+#### Agentes disponibles
+
+agent/csv
+
+agent/geojson
+
+agent/json
+
+agent/jsonl
+
+agent/xml
+
+__Front:__ buda-front
+
+Ademas del manager, front es el otro proceso de primer nivel en la plataforma; se
+encarga de presentar una interfaz de consumo mediante HTTP/S al usuario para realizar
+consultas de toda la información procesada y almancenada en los distintos datasets que
+conforman el catálogo
+
 ### FAQ
 
 __Qué se pretende?__
@@ -30,42 +84,6 @@ para poder trabajar con grandes cargas de datos
 - Permitir el desarrollo de herramientas visuales para tareas de administración y consumo de información
 - Ser agnóstica en cuanto a tecnología de forma que sus componentes puedan ser escritos incluso en distintos lenguajes de programación favoreciendo así un diseño [loosely coupled](http://en.wikipedia.org/wiki/Loose_coupling)
 
-### Arquitectura
-
-__Master:__ buda
-
-Ejecutable binario que manipula proceso(s) manager; se comunica con el manager
-mediante su interfaz tipo REST
-
-__Manager:__ buda-manager
-
-Proceso que se ejecuta en modo daemon y se encarga de administrar un catálogo de datos
-formado por distintos datasets; conserva en todo momento una lista de los datasets activos
-y sus respectivos agentes
-
-__Datasets:__ csv_sample.bdds
-
-Entradas independientes en el catálogo de datos; se describen mediante un archivo
-de especifición ( JSON o YAML ); estos archivos son utilizados por el manager para
-crear agentes; un agente es asignado a cada dataset; a cada dataset es asignado
-un ID que se calcula como un SHA a partir del archivo utilizado para crearlo
-
-__Agents:__ buda-agent-{data.type}
-
-Proceso tipo de worker, se inicia por el manager y ejecuta en modo daemon;
-abre un stream de lectura en el "hotspot" marcado por su dataset y espera por datos
-de entrada; cada paquete de datos recibido es procesado y almacenado de
-acuerdo a las configuraciones de la zona; los agentes son procesos especializados
-de acuerdo al tipo de dato que se procesará en el dataset; cada dataset indica
-tambien donde debera reportar errores el agente mediante un stream de escritura
-
-__Front:__ buda-front
-
-Ademas del manager, front es el otro proceso de primer nivel en la plataforma; se
-encarga de presentar una interfaz de consumo mediante HTTP/S al usuario para realizar
-consultas de toda la información procesada y almancenada en los distintas datasets que
-conformán el catálogo
-
 ### Consideraciones
 
 - Cada componente de la arquitectura es independiente, el mantenimiento del proyecto
@@ -85,7 +103,7 @@ conformán el catálogo
   Ruby, Go, etc
 - En una versión para producción los agentes incluso pueden desplegarse como containers
   en el cluster de forma relativamente sencilla
-- Los datasets son solo un archivo JSON/YAML por lo que implementar herramientas visuales para
+- Los datasets son sólo un archivo JSON/YAML por lo que implementar herramientas visuales para
   diseñarlos es trivial
 - Ya que los datasets son archivos de texto plano se puede montar un sistema de entrega continua
   de forma sencilla, por ejemplo: se almacenan en un repositorio Git, se configuran
@@ -97,9 +115,9 @@ conformán el catálogo
   utilizado para recibir datos; estos endpoints pueden ser UNIX sockets, TCP sockets o
   algun otro mecanismo más avanzando ( por ejemplo torrents para implementarse como sistemas
   realmente descentralizados :sunglasses: )
-- En caso de utilizar UNIX sockets se pueden "montar" en la maquina local de forma segura
-  utilizando un SSH tunnel; en caso de sockets TCP se pueden implementar de forma segura
+- En caso de utilizar UNIX sockets, se pueden "montar" en la maquina local de forma segura
+  utilizando un SSH tunnel. En caso de sockets TCP se pueden implementar de forma segura
   mediante conexiones HTTPS
 - Una vez creado el dataset se pueden implementar herramientas visuales tipo drag & drop para
-  enviar datos de forma sencilla ya que lo único que la herramienta debe hacer es iniciar
+  enviar datos de forma sencilla, ya que lo único que la herramienta debe hacer es iniciar
   el streaming de paquetes hacia el hotspot utilizado

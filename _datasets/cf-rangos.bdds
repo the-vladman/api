@@ -16,9 +16,10 @@ data:
   format: csv
   compression: none
   storage:
-    batch: 1
+    batch: 100
     collection: cf.rangos
     index: id
+  update: replace
   hotspot:
     type: tcp
     location: ''
