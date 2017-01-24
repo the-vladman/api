@@ -612,11 +612,11 @@ BudaManager.prototype._stopAgent = function( dataset ) {
 
   // Kill agent
   if( self.config.docker ) {
-    self.logger.debug( 'Stopping container agent: %s', self.agents[ dataset.extras.id ] );
+    self.logger.debug( 'Stopping container agent: %s', dataset.data.storage.collection );
     try {
-      execSync( 'docker rm -f ' + self.agents[ dataset.extras.id ] );
+      execSync( 'docker rm -f ' + dataset.data.storage.collection );
     } catch ( err ) {
-      self.logger.debug( 'Failed stopping agent: %s', self.agents[ dataset.extras.id ] );
+      self.logger.debug( 'Failed stopping agent: %s', dataset.data.storage.collection );
     }
   } else {
     self.logger.debug( 'Stopping process agent: %s', self.agents[ dataset.extras.id ] );
@@ -854,6 +854,7 @@ BudaManager.prototype.start = function() {
   self._getDatasetList( function( list ) {
     _.each( list, function( dataset ) {
       self.logger.info( 'Starting agent for dataset: ' + dataset._doc.extras.id );
+      self._stopAgent( dataset._doc );
       self._startAgent( dataset._doc );
     });
   });
