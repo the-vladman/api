@@ -601,6 +601,11 @@ BudaManager.prototype._startAgent = function( dataset ) {
     self.agents[ dataset.extras.id ] = agent.pid;
   }
 
+  // Remove manager storage fixed value
+  if( dataset.data.storage.host === self.config.storage ) {
+    delete dataset.data.storage.host;
+  }
+
   if( agent.stdout ) {
     agent.stdout.pipe( process.stdout );
   }
