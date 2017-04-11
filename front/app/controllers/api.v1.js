@@ -525,8 +525,22 @@ module.exports = function( options ) {
               total:    total
             }
           });
+          docs = null;
         });
       });
+
+      // Cleanup
+      operatorRE = null;
+      collection = null;
+      opSegments = null;
+      DataObject = null;
+      query = null;
+      queryString = null;
+      queryRange = null;
+      page = null;
+      pageSize = null;
+      error = null;
+      return next();
     },
 
     // Retrieve a specific data document
@@ -561,6 +575,8 @@ module.exports = function( options ) {
         }
 
         res.json( doc );
+        doc = null;
+        return next();
       });
     },
 
