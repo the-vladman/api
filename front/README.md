@@ -109,9 +109,9 @@ key=[regex:'/PATTERN/']
 key=[text:'needle...']
 
 * GeoEspacial
-key=[within:COLLECTION.DOC_ID]
-key=[intersects:COLLECTION.DOC_ID]
-key=[near:lat,long]
+key=[within:COLLECTION,DOC_ID]
+key=[intersects:COLLECTION,DOC_ID]
+key=[near:long,lat]
 
 * Lógico
 $or=[cond|cond]

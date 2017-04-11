@@ -61,6 +61,12 @@ module.exports = function( options ) {
     return entry;
   }
 
+  function _getDoc( collection, id ) {
+    // Try to retrieve the requested document
+    var DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
+    return DataObject.findById( id ).exec();
+  }
+
   // Public controller interface
   return {
     // Register a new API consumer
@@ -413,141 +419,197 @@ module.exports = function( options ) {
       delete queryString.page;
       delete queryString.pageSize;
 
-      // Process operators in query string
-      /* eslint complexity:0 */
-      _.each( queryString, function( v, k ) {
-        // Test if the value provided is an operator
-        if( operatorRE.test( v ) ) {
-          // Get operator key and value
-          opSegments = v.split( operatorRE );
+      async.waterfall([
+        function processOperators( cb ) {
+          // Process operators in query string
+          /* eslint complexity:0 */
+          _.each( queryString, function( v, k ) {
+            // Test if the value provided is an operator
+            if( operatorRE.test( v ) ) {
+              // Get operator key and value
+              opSegments = v.split( operatorRE );
 
-          // Loog for supported operator keys
-          switch( opSegments[ 1 ] ) {
-            // Greater than
-            case 'gt':
-              // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( isoDateRE ) ) {
-                console.log( 'is a date' );
-                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+              // Loog for supported operator keys
+              switch( opSegments[ 1 ] ) {
+                // Greater than
+                case 'gt':
+                  // Verify if provided value is a valid date
+                  if( opSegments[ 2 ].match( isoDateRE ) ) {
+                    opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                  }
+
+                  queryString[ k ] = { $gt: opSegments[ 2 ] };
+                  cb( null );
+                  break;
+                // Greater than or equal
+                case 'gte':
+                  // Verify if provided value is a valid date
+                  if( opSegments[ 2 ].match( isoDateRE ) ) {
+                    opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                  }
+
+                  queryString[ k ] = { $gte: opSegments[ 2 ] };
+                  cb( null );
+                  break;
+                // Lesser than
+                case 'lt':
+                  // Verify if provided value is a valid date
+                  if( opSegments[ 2 ].match( isoDateRE ) ) {
+                    opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                  }
+
+                  queryString[ k ] = { $lt: opSegments[ 2 ] };
+                  cb( null );
+                  break;
+                // Lesser than or equal
+                case 'lte':
+                  // Verify if provided value is a valid date
+                  if( opSegments[ 2 ].match( isoDateRE ) ) {
+                    opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                  }
+
+                  queryString[ k ] = { $lte: opSegments[ 2 ] };
+                  cb( null );
+                  break;
+                // In set
+                case 'in':
+                  queryString[ k ] = { $in: opSegments[ 2 ].split( ',' ) };
+                  cb( null );
+                  break;
+                // Not-in set
+                case 'nin':
+                  queryString[ k ] = { $nin: opSegments[ 2 ].split( ',' ) };
+                  cb( null );
+                  break;
+                // In range
+                case 'range':
+                  // Get range values
+                  queryRange = opSegments[ 2 ].split( '|' );
+
+                  // Verify if provided values are valid dates
+                  if( queryRange[ 0 ].match( isoDateRE ) ) {
+                    queryRange[ 0 ] = new Date( queryRange[ 0 ] );
+                  }
+                  if( queryRange[ 1 ].match( isoDateRE ) ) {
+                    queryRange[ 1 ] = new Date( queryRange[ 1 ] );
+                  }
+
+                  queryString[ k ] = {
+                    $gte: queryRange[ 0 ],
+                    $lte: queryRange[ 1 ]
+                  };
+                  cb( null );
+                  break;
+                // Regex operator; text is an alias
+                case 'text':
+                case 'regex':
+                  queryString[ k ] = new RegExp( opSegments[ 2 ], 'ig' );
+                  cb( null );
+                  break;
+                // Geospatial containment
+                case 'within':
+                  var collection = opSegments[ 2 ].split( ',' )[ 0 ];
+                  var id = mongoose.Types.ObjectId( opSegments[ 2 ].split( ',' )[ 1 ] );
+
+                  _getDoc( collection, id ).then( function( doc ) {
+                    queryString[ k ] = {
+                      $geoWithin: {
+                        $geometry: doc.toObject().geojson
+                      }
+                    }
+                    cb( null );
+                  }).catch( function( e ) {
+                    cb( e );
+                  });
+                  break;
+                // Geospatial intersection
+                case 'intersects':
+                  var collection = opSegments[ 2 ].split( ',' )[ 0 ];
+                  var id = mongoose.Types.ObjectId( opSegments[ 2 ].split( ',' )[ 1 ] );
+
+                  _getDoc( collection, id ).then( function( doc ) {
+                    queryString[ k ] = {
+                      $geoIntersects: {
+                        $geometry: doc.toObject().geojson
+                      }
+                    }
+                    cb( null );
+                  }).catch( function( e ) {
+                    cb( e );
+                  });
+                  break;
+                // Geospatial proximity
+                case 'near':
+                  queryString[ k ] = {
+                    $near: {
+                      $geometry: {
+                        type:        'Point',
+                        coordinates: opSegments[ 2 ].split( ',' )
+                      },
+                      $maxDistance: 100,
+                      $minDistance: 1
+                    }
+                  };
+                  cb( null );
+                  break;
+                // Delete unsupported operators
+                default:
+                  delete queryString[ k ];
+                  cb( null );
               }
-
-              queryString[ k ] = { $gt: opSegments[ 2 ] };
-              break;
-            // Greater than or equal
-            case 'gte':
-              // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( isoDateRE ) ) {
-                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
-              }
-
-              queryString[ k ] = { $gte: opSegments[ 2 ] };
-              break;
-            // Lesser than
-            case 'lt':
-              // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( isoDateRE ) ) {
-                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
-              }
-
-              queryString[ k ] = { $lt: opSegments[ 2 ] };
-              break;
-            // Lesser than or equal
-            case 'lte':
-              // Verify if provided value is a valid date
-              if( opSegments[ 2 ].match( isoDateRE ) ) {
-                opSegments[ 2 ] = new Date( opSegments[ 2 ] );
-              }
-
-              queryString[ k ] = { $lte: opSegments[ 2 ] };
-              break;
-            // In set
-            case 'in':
-              queryString[ k ] = { $in: opSegments[ 2 ].split( ',' ) };
-              break;
-            // Not-in set
-            case 'nin':
-              queryString[ k ] = { $nin: opSegments[ 2 ].split( ',' ) };
-              break;
-            // In range
-            case 'range':
-              // Get range values
-              queryRange = opSegments[ 2 ].split( '|' );
-
-              // Verify if provided values are valid dates
-              if( queryRange[ 0 ].match( isoDateRE ) ) {
-                queryRange[ 0 ] = new Date( queryRange[ 0 ] );
-              }
-              if( queryRange[ 1 ].match( isoDateRE ) ) {
-                queryRange[ 1 ] = new Date( queryRange[ 1 ] );
-              }
-
-              queryString[ k ] = {
-                $gte: queryRange[ 0 ],
-                $lte: queryRange[ 1 ]
-              };
-              break;
-            // Regex operator; text is an alias
-            case 'text':
-            case 'regex':
-              queryString[ k ] = new RegExp( opSegments[ 2 ], 'ig' );
-              break;
-            // Delete unsupported operators
-            default:
-              delete queryString[ k ];
-          }
+            }
+          });
         }
-      });
-
-      // Run query
-      logger.info( 'Run query' );
-      logger.debug({ queryString: queryString }, 'Run query with filters' );
-      query = DataObject.find( queryString );
-      DataObject.find( queryString ).count( function( err, total ) {
+      ], function( err ) {
         if( err ) {
           return next( err );
         }
 
-        query
-          .skip( ( page - 1 ) * pageSize )
-          .limit( pageSize );
-
         // Run query
-        query.exec( function( err2, docs ) {
-          if( err2 ) {
-            return next( err2 );
+        logger.info( 'Run query' );
+        logger.debug({ queryString: queryString }, 'Run query with filters' );
+        query = DataObject.find( queryString );
+        DataObject.find( queryString ).count( function( e, total ) {
+          if( e ) {
+            return next( e );
           }
 
-          res.json({
-            results:    docs,
-            pagination: {
-              page:     page,
-              pageSize: pageSize,
-              total:    total
+          query
+            .skip( ( page - 1 ) * pageSize )
+            .limit( pageSize );
+
+          // Run query
+          query.exec( function( err2, docs ) {
+            if( err2 ) {
+              return next( err2 );
             }
+
+            res.json({
+              results:    docs,
+              pagination: {
+                page:     page,
+                pageSize: pageSize,
+                total:    total
+              }
+            });
+
+            // Cleanup
+            docs = null;
+            query = null;
+            error = null;
+            operatorRE = null;
+            collection = null;
+            opSegments = null;
+            DataObject = null;
           });
-          docs = null;
         });
       });
-
-      // Cleanup
-      operatorRE = null;
-      collection = null;
-      opSegments = null;
-      DataObject = null;
-      query = null;
-      queryString = null;
-      queryRange = null;
-      page = null;
-      pageSize = null;
-      error = null;
-      return next();
     },
 
     // Retrieve a specific data document
     getDocument: function( req, res, next ) {
       var collection;
       var error;
-      var DataObject;
 
       // Validate collection
       logger.info( 'Retrieve document' );
@@ -559,24 +621,13 @@ module.exports = function( options ) {
         return next( error );
       }
 
-      // Adjust model to run-time requirements
-      DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
-
-      // Try to retrieve the requested document
-      DataObject.findById( req.params.docId, function( err, doc ) {
-        if( err ) {
-          return next( err );
-        }
-
-        if( ! doc ) {
-          error = new Error( 'INVALID_DOCUMENT_ID' );
-          error.status = 400;
-          return next( error );
-        }
-
+      _getDoc( collection, req.params.docId ).then( function( doc ) {
         res.json( doc );
         doc = null;
-        return next();
+      }).catch( function() {
+        error = new Error( 'INVALID_DOCUMENT_ID' );
+        error.status = 400;
+        return next( error );
       });
     },
 
