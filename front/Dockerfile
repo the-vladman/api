@@ -8,7 +8,7 @@
 #   --name buda-front \
 #   -dP mxabierto/buda-front
 
-FROM mxabierto/nodejs
+FROM alpine
 
 MAINTAINER bcessa <ben@pixative.com>
 
@@ -20,7 +20,8 @@ ADD . /root/buda-front
 # mongoose and ws =/
 # but after modules compile are no longer required
 RUN \
-  apk-install g++ make python && \
+  apk --no-cache add nodejs g++ make python && \
+  npm install -g npm@latest && \
   npm install --no-optional && \
   apk del g++ make python
 
