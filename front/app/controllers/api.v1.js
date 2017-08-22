@@ -431,6 +431,18 @@ module.exports = function( options ) {
 
               // Loog for supported operator keys
               switch( opSegments[ 1 ] ) {
+
+                // Equal
+                case 'eq':
+                  // Verify if provided value is a valid date
+                  if( opSegments[ 2 ].match( isoDateRE ) ) {
+                    opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                  }
+
+                  queryString[ k ] = { $eq: opSegments[ 2 ] };
+                  cb( null );
+                  break;
+
                 // Greater than
                 case 'gt':
                   // Verify if provided value is a valid date
@@ -441,6 +453,7 @@ module.exports = function( options ) {
                   queryString[ k ] = { $gt: opSegments[ 2 ] };
                   cb( null );
                   break;
+
                 // Greater than or equal
                 case 'gte':
                   // Verify if provided value is a valid date
@@ -504,6 +517,8 @@ module.exports = function( options ) {
                 case 'text':
                 case 'regex':
                   queryString[ k ] = new RegExp( opSegments[ 2 ], 'ig' );
+
+                  console.log("checking text",k, queryString[k])
                   cb( null );
                   break;
                 // Geospatial containment
@@ -557,7 +572,13 @@ module.exports = function( options ) {
                   delete queryString[ k ];
                   cb( null );
               }
+            }else{
+              queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
+              
+              cb( null );
             }
+
+
           });
         }
       ], function( err ) {
