@@ -399,6 +399,7 @@ module.exports = function( options ) {
       var pageSize;
       var error;
 
+
       // Validate collection
       if( collection.substr( 0, 4 ) === 'sys.' ||
           collection.substr( 0, 7 ) === 'system.' ) {
@@ -439,7 +440,8 @@ module.exports = function( options ) {
                     opSegments[ 2 ] = new Date( opSegments[ 2 ] );
                   }
 
-                  queryString[ k ] = { $eq: opSegments[ 2 ] };
+                  queryString[k] = isNaN(opSegments[2]) ? { $eq: opSegments[ 2 ] }:{ $eq: Number(opSegments[ 2 ]) }
+
                   cb( null );
                   break;
 
@@ -573,9 +575,8 @@ module.exports = function( options ) {
                   cb( null );
               }
             }else{
-              queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
-              
-              cb( null );
+                queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
+                cb( null );
             }
 
 
