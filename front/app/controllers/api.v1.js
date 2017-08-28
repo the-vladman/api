@@ -385,6 +385,8 @@ module.exports = function( options ) {
     // Run a general data query
     /* eslint max-len:0 */
     runQuery: function( req, res, next ) {
+
+        console.log("Running")
       // ISO 8601 regex
       // Originally from: http://goo.gl/qKfN2e
       var isoDateRE = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$/;
@@ -398,6 +400,7 @@ module.exports = function( options ) {
       var page;
       var pageSize;
       var error;
+
 
       // Validate collection
       if( collection.substr( 0, 4 ) === 'sys.' ||
@@ -439,7 +442,8 @@ module.exports = function( options ) {
                     opSegments[ 2 ] = new Date( opSegments[ 2 ] );
                   }
 
-                  queryString[ k ] = { $eq: opSegments[ 2 ] };
+                  queryString[k] = isNaN(opSegments[2]) ? { $eq: opSegments[ 2 ] }:{ $eq: Number(opSegments[ 2 ]) }
+
                   cb( null );
                   break;
 
@@ -573,9 +577,8 @@ module.exports = function( options ) {
                   cb( null );
               }
             }else{
-              queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
-              
-              cb( null );
+                queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
+                cb( null );
             }
 
 
