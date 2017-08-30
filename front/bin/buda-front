@@ -35,3 +35,5 @@ delete config._;
 // Create and start front instance
 front = new BudaFront( config );
 front.start();
+
+module.exports = front; // for testing
