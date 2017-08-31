@@ -1,5 +1,7 @@
+process.env.NODE_ENV="test"; // environment test
 
-process.env.NODE_ENV="test";
+let mongoose = require("mongoose");
+let Schema = mongoose.Schema;
 
 let chai = require('chai');
 let chaiHttp = require('chai-http');
@@ -9,90 +11,89 @@ chai.use(chaiHttp);
 let server = require('../bin/buda-front');
 let api_home = "localhost:8000";
 
-let validCollection = "calidadAire";
-let validDocId = "5994900090120a4cf3c9aa33";
+let testCollection = "tests";
+let validDocId;
 
-let testCollection = "test_collection";
-let testDocId = "";
 
-console.log("\n\tStarting tests...");
+describe("CRUD OPERATIONS", ()=>{
 
-/*
-	GET DOCUMENTS
-*/
-describe("GET DOCUMENTS - Using collection: " + validCollection + "\n", ()=>{
-	describe('/GET ' + validCollection, () => {
+	before(function() {
+		let testSchema = new Schema({
+			name: { type: String, required: true },
+			description: { type: String, required: false }
+		});
+
+		let testModel = mongoose.model(testCollection, testSchema);
+
+		for(let i = 0; i < 10; i++){
+			new testModel({name:"test_" + i, description:i%2}).save();
+		}
+	});
+
+	// get all
+	describe('/GET ' + testCollection, () => {
 		it('it should GET a list of records', (done) => {
 
 			chai.request(api_home)
-				.get('/v1/' + validCollection)
+				.get('/v1/' + testCollection)
 				.end((err, res) => {
 					res.should.have.status(200);
 					res.body.should.be.a('object').have.property("results").be.a("array")
+
+					validDocId = res.body.results[0]["_id"];
 					done();
 				});
 		});
 	});
 
-	describe('/GET/:docId ' + validCollection, () => {
-		it('it should GET one record with _id=' + validDocId 	, (done) => {
+	// get one
+	describe('/GET/:docId ' + testCollection, () => {
+		it('it should GET one record', (done) => {
 			chai.request(api_home)
-				.get('/v1/' + validCollection + '/' + validDocId)
+				.get('/v1/' + testCollection + '/' + validDocId)
 				.end((err, res) => {
-					console.log(res.body)
-
 					res.should.have.status(200);
 					res.body.should.be.a('object').have.property("_id").eql(validDocId);
 					done();
 				});
 		});
 	});
-})
 
-
-
-
-/*
-	CRUD OPERATIONS
-*/
-describe("CRUD OPERATIONS - Using collection: " + testCollection + "\n", ()=> {
+	// insert
 	describe('/POST ' + testCollection, () => {
 		it('it should INSERT one record in the db', (done) => {
 			chai.request(api_home)
-				.post('/v1/' + testCollection).send({"name":"value"})
+				.post('/v1/' + testCollection).send({name:"value"})
 				.end((err, res) => {
 					res.should.have.status(200);
 					res.body.should.have.property("_id");
-
-					testDocId = res.body["_id"];
 					done();
 				});
 		});
 	});
 
-
+	// update
 	describe('/PUT/:docId ' + testCollection, () => {
 		it('it should UPDATE one record in the db with name="new_value"', (done) => {
-
 			chai.request(api_home)
-				.put('/v1/' + testCollection + '/' + testDocId).send({"name":"put_value"})
+				.put('/v1/' + testCollection + '/' + validDocId).send({description:"put_value"})
 				.end((err, res) => {
 					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(testDocId);
+					res.body.should.have.property("_id").eql(validDocId);
 					done();
 				});
 		});
 	});
 
-
+	// update
 	describe('/PATCH/:docId ' + testCollection, () => {
 		it('it should UPDATE one record in the db with another_value="patch_value"', (done) => {
 
 			chai.request(api_home)
-				.patch('/v1/' + testCollection + '/' + testDocId).send({"another_value":"patch_value"})
+				.patch('/v1/' + testCollection + '/' + validDocId).send({another_value:"patch_value"})
 				.end((err, res) => {
 					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(testDocId);
+					res.body.should.have.property("_id").eql(validDocId);
 					done();
 				});
 		});
@@ -103,14 +104,15 @@ describe("CRUD OPERATIONS - Using collection: " + testCollection + "\n", ()=> {
 		it('it should DELETE one record in the db', (done) => {
 
 			chai.request(api_home)
-				.delete('/v1/' + testCollection + '/' + testDocId)
+				.delete('/v1/' + testCollection + '/' + validDocId)
 				.end((err, res) => {
 					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(testDocId);
+					res.body.should.have.property("_id").eql(validDocId);
 					done();
 				});
 		});
 	});
+
 });
 
 
@@ -118,7 +120,7 @@ describe("CRUD OPERATIONS - Using collection: " + testCollection + "\n", ()=> {
 /*
 	OPERATIONS WITH WRONG PARAMS
 */
-describe("OPERATIONS WITH WRONG PARAMS - Using collection: notValidCollection\n", ()=>{
+describe("OPERATIONS WITH WRONG PARAMS - Using collection: nottestCollection\n", ()=>{
 	// bad collection
 	describe('/GET notValidCollection', () => {
 		it('it should GET a empty list of records', (done) => {
@@ -242,5 +244,9 @@ describe("OPERATIONS WITH WRONG PARAMS - Using collection: notValidCollection\n"
 					done();
 				});
 		});
+	});
+
+	after(()=>{
+		mongoose.connection.db.dropCollection(testCollection);
 	});
 });
