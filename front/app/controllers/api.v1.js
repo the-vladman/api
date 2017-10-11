@@ -23,6 +23,96 @@ var DataObjectSchema = new mongoose.Schema({}, {
     safe:       { j: 1, w: 'majority' }
 });
 
+// recursive search
+function isValidFeature(obj, key, value){
+  var result;
+  if(_.isArray(obj)){
+    for(var arrayElement of obj){
+      if(_.isObject(arrayElement)){
+        result = isValidFeature(arrayElement, key, value);
+
+        if(result){
+          return result;
+        }
+      }
+    }
+  }else{
+    if(obj[key]){
+      if(typeof obj[key] == "string"){
+        result = (obj[key] == value);
+      }else if(_.isArray(obj[key])){
+
+        result = obj[key].indexOf(value) > -1
+        // var isValid = false;
+        // for( var i = 0; i < obj[key].length; i++){
+        //   if(_.isObject(obj[key][i])){
+        //     result = JSON.stringify(obj[key][i]) == value;
+        //   }else{
+        //     result = String(obj[key][i]) == value;
+        //   }
+        // }
+
+      }else if(_.isObject(obj[key])){
+        result = (obj[key][keyToFind] == value);
+      }else{
+        result = (obj[key] == value);
+      }
+
+      if(result){
+        return result;
+      }
+    }
+
+    for(var property in obj){
+      if(_.isObject(obj[property])){
+        result = isValidFeature(obj[property], key, value);
+
+        if(result){
+          return result;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+
+
+// function isValidRelativeSearch(obj, relativePath, value){
+//   console.log(obj, relativePath, value);
+//
+//   var result = false;
+//   if(relativePath.length==0){
+//     if( obj == value){
+//       return true;
+//     }
+//   }else if(obj[relativePath[0]]){
+//     result = isValidRelativeSearch(obj[relativePath[0]], relativePath.slice(1, relativePath.length), value );
+//
+//     if(result){
+//       return result;
+//     }
+//   }else{
+//     if(_.isArray(obj)){
+//
+//       for(var element of obj){
+//         if(element[relativePath[0]]){
+//           result = isValidRelativeSearch(element[relativePath[0]], relativePath.slice(1, relativePath.length), value );
+//
+//           if(result){
+//             return result;
+//           }
+//         }
+//       }
+//
+//     }
+//   }
+//
+//   return result;
+// }
+
+
 // Controller definition
 module.exports = function( options ) {
     // Local logger accesor
@@ -398,6 +488,7 @@ module.exports = function( options ) {
             var page;
             var pageSize;
             var error;
+            var recursiveSearch = false;
 
 
             // Validate collection
@@ -420,6 +511,13 @@ module.exports = function( options ) {
             delete queryString.page;
             delete queryString.pageSize;
 
+            if(queryString["recursiveSearch"]){
+              recursiveSearch = queryString["recursiveSearch"] == "1";
+
+              delete queryString["recursiveSearch"];
+              recursiveSearch = recursiveSearch && (Object.keys(queryString).length > 0);
+            }
+
             async.waterfall([
                 function processOperators( cb ) {
 
@@ -436,12 +534,27 @@ module.exports = function( options ) {
 
                                 // Equal
                                 case 'eq':
+
+                                var isDate;
                                 // Verify if provided value is a valid date
                                 if( opSegments[ 2 ].match( isoDateRE ) ) {
                                     opSegments[ 2 ] = new Date( opSegments[ 2 ] );
+                                    isDate = true;
                                 }
 
-                                queryString[k] = isNaN(opSegments[2]) ? { $eq: opSegments[ 2 ] }:{ $eq: Number(opSegments[ 2 ]) }
+                                if(isDate || isNaN(opSegments[2])){
+                                  queryString[k] = { $eq: opSegments[ 2 ] };
+                                }else{
+                                  queryString["$or"] = [{}]
+                                  queryString["$or"][0][k] = { $eq: opSegments[ 2 ] };
+
+                                  if(!isNaN(v)){
+                                    queryString["$or"].push({});
+                                    queryString["$or"][1][k] = { $eq: Number(opSegments[ 2 ]) };
+                                  }
+
+                                  delete queryString[k];
+                                }
 
                                 cb( null );
                                 break;
@@ -576,9 +689,23 @@ module.exports = function( options ) {
                                 cb( null );
                             }
                         }else{
-                            queryString[k] = isNaN(v) ? { $eq: v }:{ $eq: Number(v) }
 
-                            cb( null );
+                          if(recursiveSearch){
+                            queryString["recursiveSearch"] = {};
+                            queryString["recursiveSearch"][k] = v;
+                          }else{
+                              queryString["$or"] = [{}]
+                              queryString["$or"][0][k] = { $eq: v };
+
+                              if(!isNaN(v)){
+                                queryString["$or"].push({});
+                                queryString["$or"][1][k] = { $eq: Number(v) };
+                              }
+                            }
+
+                            delete queryString[k];
+
+                          cb( null );
                         }
                     });
 
@@ -592,44 +719,93 @@ module.exports = function( options ) {
                     return next( err );
                 }
 
+                var nestedKeys = [];
+                var nestedValues = [];
+                if(recursiveSearch){
+                  for(var key in queryString["recursiveSearch"]){
+                    nestedKeys.push(key);
+                    nestedValues.push(queryString["recursiveSearch"][key]);
+                  }
+
+                  delete queryString["recursiveSearch"];
+                }
+
                 // Run query
                 logger.info( 'Run query' );
                 logger.debug({ queryString: queryString }, 'Run query with filters' );
                 query = DataObject.find( queryString );
-                DataObject.find( queryString ).count( function( e, total ) {
+
+                if(recursiveSearch){
+                  logger.info("Finding nested value");
+
+                  var docs = [];
+                  var cursor = query.cursor();
+                  var value;
+                  cursor.on("data", function(doc){
+                    for(var i = 0; docs.length < (pageSize*page) && i < nestedKeys.length; i++){
+                      if(isValidFeature(doc, nestedKeys[i], nestedValues[i])){
+                        docs.push(doc);
+                      }
+                    }
+                  });
+
+                  cursor.on('end', function () {
+                    var slice = docs.slice( (page-1)*pageSize, docs.length );
+                    res.json({
+                      results: slice,
+                      pagination: {
+                        page:     page,
+                        pageSize: pageSize,
+                        total:    slice.length
+                      }
+                    });
+
+                    docs = null;
+                    query = null;
+                    error = null;
+                    operatorRE = null;
+                    collection = null;
+                    opSegments = null;
+                    DataObject = null;
+                    recursiveSearch = false;
+                  });
+                }else{
+                  DataObject.find( queryString ).count( function( e, total ) {
                     if( e ) {
-                        return next( e );
+                      return next( e );
                     }
 
                     query
-                    .skip( ( page - 1 ) * pageSize )
-                    .limit( pageSize );
+                      .skip( ( page - 1 ) * pageSize )
+                      .limit( pageSize );
 
                     // Run query
                     query.exec( function( err2, docs ) {
-                        if( err2 ) {
-                            return next( err2 );
+                      if( err2 ) {
+                        return next( err2 );
+                      }
+
+                      res.json({
+                        results:    docs,
+                        pagination: {
+                          page:     page,
+                          pageSize: pageSize,
+                          total:    total
                         }
+                      });
 
-                        res.json({
-                            results:    docs,
-                            pagination: {
-                                page:     page,
-                                pageSize: pageSize,
-                                total:    total
-                            }
-                        });
-
-                        // Cleanup
-                        docs = null;
-                        query = null;
-                        error = null;
-                        operatorRE = null;
-                        collection = null;
-                        opSegments = null;
-                        DataObject = null;
+                      // Cleanup
+                      docs = null;
+                      query = null;
+                      error = null;
+                      operatorRE = null;
+                      collection = null;
+                      opSegments = null;
+                      DataObject = null;
+                      recursiveSearch = false;
                     });
-                });
+                  });
+                }
             });
         },
 
