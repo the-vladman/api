@@ -20,14 +20,126 @@ describe("CRUD OPERATIONS", ()=>{
 	before(function() {
 		let testSchema = new Schema({
 			name: { type: String, required: true },
-			description: { type: String, required: false }
+			description: { type: String, required: false },
+			data: [
+				{
+					alphabet: [{value: String, anotherValue: [Number]}],
+				}
+			],
+			meta: {
+				tags: [String]
+			}
 		});
 
 		let testModel = mongoose.model(testCollection, testSchema);
 
-		for(let i = 0; i < 10; i++){
-			new testModel({name:"test_" + i, description:i%2}).save();
+		var schema;
+		var tagsOptions = ["apple", "banana", "grape", "orange", "avocado", "strawberry", "peaches"]
+		for(let i = 0; i < 150; i++){
+			schema = {
+				name: "test_" + i,
+				description: String(i%2),
+				data: [],
+				meta: {
+					tags: []
+				}
+			}
+
+			for( let j = 0; j < parseInt(Math.random()*10); j++){
+				schema.data.push({
+					alphabet: []
+				});
+
+				for( let k = 0; k < parseInt(Math.random()*10); k++){
+					schema.data[j].alphabet.push({value: String(k), anotherValue: [j, k, i]});
+				}
+			}
+
+			for( let j = 0; j < parseInt(Math.random()*3); j++){
+				schema.meta.tags.push( tagsOptions[parseInt(Math.random()*tagsOptions.length)] );
+			}
+
+			new testModel(schema).save();
 		}
+	});
+
+
+	describe('/GET recursive search key=[x, value, y, z]', () => {
+		it('it should GET a list of records with at the array defined by key containing at least one time the value', (done) => {
+
+			let valueToFind = "peaches";
+			chai.request(api_home)
+			.get('/v1/' + testCollection + "?tags=" + valueToFind + "&recursiveSearch=1")
+			.end((err, res) => {
+				res.should.have.status(200);
+				res.body.should.be.a('object').have.property("results").be.a("array");
+
+				for(var i = 0; i < res.body.results.length; i++){
+					res.body.results[i].meta.tags.should.contains(valueToFind)
+				}
+
+				done();
+				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+			});
+		});
+	});
+
+
+	describe('/GET key=[x, value, y, z]', () => {
+		it('it should GET a list of records with at the array defined by key containing at least one time the value', (done) => {
+
+			let valueToFind = "peaches";
+			chai.request(api_home)
+			.get('/v1/' + testCollection + "?meta.tags=" + valueToFind)
+			.end((err, res) => {
+				res.should.have.status(200);
+				res.body.should.be.a('object').have.property("results").be.a("array");
+
+				for(var i = 0; i < res.body.results.length; i++){
+					res.body.results[i].meta.tags.should.contains(valueToFind)
+				}
+
+				done();
+				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+			});
+		});
+	});
+
+
+	describe('/GET nested search obj[key]=value', () => {
+		it('it should GET a list of records with at least one pair key=value', (done) => {
+
+			let valueToFind = "3";
+			chai.request(api_home)
+			.get('/v1/' + testCollection + "?value=" + valueToFind + "&recursiveSearch=1")
+			.end((err, res) => {
+				res.should.have.status(200);
+				res.body.should.be.a('object').have.property("results").be.a("array");
+
+				var isValid = false;
+				resultsLoop:
+				for(var i = 0; i < res.body.results.length; i++){
+					// console.log(res.body.results[i])
+					dataLoop:
+					for(var j = 0; j < res.body.results[i].data.length; j++){
+						// console.log(res.body.results[i].data[j])
+						valueLoop:
+						for(var k = 0; k < res.body.results[i].data[j].alphabet.length; k++){
+							// console.log(res.body.results[i].data[j].alphabet[k].value, valueToFind);
+							if(res.body.results[i].data[j].alphabet[k].value == valueToFind){
+								isValid = true;
+								break dataLoop;
+							}
+						}
+					}
+
+					isValid.should.be.ok;
+				}
+
+				done();
+				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+			});
+		});
 	});
 
 	// get all
@@ -247,6 +359,6 @@ describe("OPERATIONS WITH WRONG PARAMS - Using collection: nottestCollection\n",
 	});
 
 	after(()=>{
-		mongoose.connection.db.dropCollection(testCollection);
+		mongoose.connection.db.dropCollection(testCollection, function(err, result){});
 	});
 });
