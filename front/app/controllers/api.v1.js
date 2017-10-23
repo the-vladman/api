@@ -41,17 +41,7 @@ function isValidFeature(obj, key, value){
       if(typeof obj[key] == "string"){
         result = (obj[key] == value);
       }else if(_.isArray(obj[key])){
-
-        result = obj[key].indexOf(value) > -1
-        // var isValid = false;
-        // for( var i = 0; i < obj[key].length; i++){
-        //   if(_.isObject(obj[key][i])){
-        //     result = JSON.stringify(obj[key][i]) == value;
-        //   }else{
-        //     result = String(obj[key][i]) == value;
-        //   }
-        // }
-
+        result = obj[key].indexOf(value) > -1;
       }else if(_.isObject(obj[key])){
         result = (obj[key][keyToFind] == value);
       }else{
@@ -79,38 +69,38 @@ function isValidFeature(obj, key, value){
 
 
 
-// function isValidRelativeSearch(obj, relativePath, value){
-//   console.log(obj, relativePath, value);
-//
-//   var result = false;
-//   if(relativePath.length==0){
-//     if( obj == value){
-//       return true;
-//     }
-//   }else if(obj[relativePath[0]]){
-//     result = isValidRelativeSearch(obj[relativePath[0]], relativePath.slice(1, relativePath.length), value );
-//
-//     if(result){
-//       return result;
-//     }
-//   }else{
-//     if(_.isArray(obj)){
-//
-//       for(var element of obj){
-//         if(element[relativePath[0]]){
-//           result = isValidRelativeSearch(element[relativePath[0]], relativePath.slice(1, relativePath.length), value );
-//
-//           if(result){
-//             return result;
-//           }
-//         }
-//       }
-//
-//     }
-//   }
-//
-//   return result;
-// }
+function isValidRelativeSearch(obj, relativePath, value){
+  console.log(obj, relativePath, value);
+
+  var result = false;
+  if(relativePath.length==0){
+    if( obj == value){
+      return true;
+    }
+  }else if(obj[relativePath[0]]){
+    result = isValidRelativeSearch(obj[relativePath[0]], relativePath.slice(1, relativePath.length), value );
+
+    if(result){
+      return result;
+    }
+  }else{
+    if(_.isArray(obj)){
+
+      for(var element of obj){
+        if(element[relativePath[0]]){
+          result = isValidRelativeSearch(element[relativePath[0]], relativePath.slice(1, relativePath.length), value );
+
+          if(result){
+            return result;
+          }
+        }
+      }
+
+    }
+  }
+
+  return result;
+}
 
 
 // Controller definition
@@ -841,35 +831,9 @@ module.exports = function( options ) {
             var DataObject;
             var doc;
 
-            // Validate collection
-            logger.info( 'Register document' );
-            collection = req.params.dataCollection;
-            if( collection.substr( 0, 4 ) === 'sys.' ||
-            collection.substr( 0, 7 ) === 'system.' ) {
-                error = new Error( 'RESTRICTED_DATA_COLLECTION' );
-                error.status = 400;
-                return next( error );
-            }
-
-            // Validate there's data to work with
-            if( _.isEmpty( req.body ) ) {
-                error = new Error( 'NO_DATA_PROVIDED' );
-                error.status = 400;
-                return next( error );
-            }
-
-            // Adjust model to run-time requirements
-            DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
-
-            // Create and store document
-            doc = new DataObject( req.body );
-            doc.save( function( err ) {
-                if( err ) {
-                    return next( err );
-                }
-
-                res.json( doc );
-            });
+            error = new Error("Forbidden");
+            error.status = 403;
+            return next(error);
         },
 
         // Update a specific data document
@@ -879,41 +843,9 @@ module.exports = function( options ) {
             var DataObject;
             var docId = req.params.docId;
 
-            // Validate collection
-            logger.info( 'Update document' );
-            collection = req.params.dataCollection;
-            if( collection.substr( 0, 4 ) === 'sys.' ||
-            collection.substr( 0, 7 ) === 'system.' ) {
-                error = new Error( 'RESTRICTED_DATA_COLLECTION' );
-                error.status = 400;
-                return next( error );
-            }
-
-            // Validate there's data to work with
-            if( _.isEmpty( req.body ) ) {
-                error = new Error( 'NO_DATA_PROVIDED' );
-                error.status = 400;
-                return next( error );
-            }
-
-            // Adjust model to run-time requirements
-            DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
-
-            // Try to retrieve and update the requested document
-            /* eslint no-reserved-keys:0 */
-            DataObject.findByIdAndUpdate( docId, req.body, { new: true }, function( err, doc ) {
-                if( err ) {
-                    return next( err );
-                }
-
-                if( ! doc ) {
-                    error = new Error( 'INVALID_DOCUMENT_ID' );
-                    error.status = 400;
-                    return next( error );
-                }
-
-                res.json( doc );
-            });
+            error = new Error("Forbidden");
+            error.status = 403;
+            return next(error);
         },
 
         // Delete a specific data document
@@ -923,33 +855,9 @@ module.exports = function( options ) {
             var DataObject;
             var docId = req.params.docId;
 
-            // Validate collection
-            logger.info( 'Delete document' );
-            collection = req.params.dataCollection;
-            if( collection.substr( 0, 4 ) === 'sys.' ||
-            collection.substr( 0, 7 ) === 'system.' ) {
-                error = new Error( 'RESTRICTED_DATA_COLLECTION' );
-                error.status = 400;
-                return next( error );
-            }
-
-            // Adjust model to run-time requirements
-            DataObject = mongoose.model( 'DataObject', DataObjectSchema, collection );
-
-            // Try to select and remove the requested document
-            DataObject.findByIdAndRemove( docId, function( err, doc ) {
-                if( err ) {
-                    return next( err );
-                }
-
-                if( ! doc ) {
-                    error = new Error( 'INVALID_DOCUMENT_ID' );
-                    error.status = 400;
-                    return next( err );
-                }
-
-                res.json( doc );
-            });
+            error = new Error("Forbidden");
+            error.status = 403;
+            return next(error);
         }
     };
 };
