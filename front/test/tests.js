@@ -9,15 +9,16 @@ let should = chai.should();
 chai.use(chaiHttp);
 
 let server = require('../bin/buda-front');
-let api_home = "localhost:8000";
+let api_home = "localhost:" + server.config.port;
 
 let testCollection = "tests";
+let testCollectionSize = 50;
 let validDocId;
 
 
-describe("CRUD OPERATIONS", ()=>{
+describe("BUDA API FRONT TESTS", function(){
 
-	before(function() {
+	before(function(done){
 		let testSchema = new Schema({
 			name: { type: String, required: true },
 			description: { type: String, required: false },
@@ -35,7 +36,7 @@ describe("CRUD OPERATIONS", ()=>{
 
 		var schema;
 		var tagsOptions = ["apple", "banana", "grape", "orange", "avocado", "strawberry", "peaches"]
-		for(let i = 0; i < 150; i++){
+		for(let i = 0; i < testCollectionSize; i++){
 			schema = {
 				name: "test_" + i,
 				description: String(i%2),
@@ -59,306 +60,335 @@ describe("CRUD OPERATIONS", ()=>{
 				schema.meta.tags.push( tagsOptions[parseInt(Math.random()*tagsOptions.length)] );
 			}
 
-			new testModel(schema).save();
+			new testModel(schema).save(function(err, doc){
+				if(!validDocId){
+					validDocId = String(doc["_id"]);
+				}
+			});
 		}
+
+		done();
 	});
 
+	afterEach(function(){console.log("");});
 
-	describe('/GET recursive search key=[x, value, y, z]', () => {
-		it('it should GET a list of records with at the array defined by key containing at least one time the value', (done) => {
 
-			let valueToFind = "peaches";
-			chai.request(api_home)
-			.get('/v1/' + testCollection + "?tags=" + valueToFind + "&recursiveSearch=1")
-			.end((err, res) => {
-				res.should.have.status(200);
-				res.body.should.be.a('object').have.property("results").be.a("array");
+	describe("CRUD OPERATIONS", function(){
+		this.timeout(10000);
 
-				for(var i = 0; i < res.body.results.length; i++){
-					res.body.results[i].meta.tags.should.contains(valueToFind)
-				}
+		// get all
+		describe('/GET ', function(){
+			it('it should GET a list of records with length of ' + testCollectionSize, function(done){
+				chai.request(api_home)
+					.get('/v1/' + testCollection)
+					.end(function(err, res){
+						res.should.have.status(200);
+						res.body.should.be.a('object').have.property("results").be.a("array");
+						res.body.results.should.have.lengthOf(testCollectionSize);
 
-				done();
-				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+						done();
+					});
+			});
+		});
+
+		// get one
+		describe('/GET/:docId ', function(){
+			it('it should GET one record', function(done){
+				chai.request(api_home)
+					.get('/v1/' + testCollection + '/' + validDocId )
+					.end(function(err, res){
+						res.should.have.status(200);
+						res.body.should.be.a('object').have.property("_id").eql(validDocId);
+
+						done();
+					});
+			});
+		});
+
+
+		// insert
+		describe('/POST ', function() {
+			it('it should return error code 403 - Forbidden', function(done) {
+				chai.request(api_home)
+					.post('/v1/' + testCollection).send({name:"value"})
+					.end(function(err, res){
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+
+						done();
+					});
+			});
+		});
+
+
+		// update PUT
+		describe('/PUT/:docId ', function(){
+			it('it should return error code 403 - Forbidden', function(done){
+
+				chai.request(api_home)
+					.put('/v1/' + testCollection + '/' + validDocId)
+					.send({another_value:"put_value"})
+					.end(function(err, res){
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+
+						done();
+					});
+			});
+		});
+
+
+		// update PATCH
+		describe('/PATCH/:docId ', function(){
+			it('it should return error code 403 - Forbidden', function(done){
+
+				chai.request(api_home)
+					.patch('/v1/' + testCollection + '/' + validDocId)
+					.send({another_value:"patch_value"})
+					.end(function(err, res){
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+						done();
+					});
+			});
+		});
+
+
+		describe('/DELETE/:docId ', function(){
+			it('it should return error code 403 - Forbidden', function(done) {
+
+				chai.request(api_home)
+					.delete('/v1/' + testCollection + '/' + validDocId)
+					.end(function(err, res){
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+
+						done();
+					});
 			});
 		});
 	});
 
 
-	describe('/GET key=[x, value, y, z]', () => {
-		it('it should GET a list of records with at the array defined by key containing at least one time the value', (done) => {
+	describe("FILTERS", function(){
+		this.timeout(10000);
 
-			let valueToFind = "peaches";
-			chai.request(api_home)
-			.get('/v1/' + testCollection + "?meta.tags=" + valueToFind)
-			.end((err, res) => {
-				res.should.have.status(200);
-				res.body.should.be.a('object').have.property("results").be.a("array");
+		describe("/GET recursive search key=[x, value, y, z]", function(){
+			it('it should GET a list of records with at the array defined by key containing at least one time the value', function(done){
 
-				for(var i = 0; i < res.body.results.length; i++){
-					res.body.results[i].meta.tags.should.contains(valueToFind)
-				}
+				let valueToFind = "peaches";
+				chai.request(api_home)
+					.get('/v1/' + testCollection)
+					.query({"tags": valueToFind, "recursiveSearch": 1})
+					.end(function(err, res){
+						res.should.have.status(200);
+						res.body.should.be.a('object').have.property("results").be.a("array");
 
-				done();
-				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+						for(var i = 0; i < res.body.results.length; i++){
+							res.body.results[i].meta.tags.should.contains(valueToFind);
+						}
+
+						done();
+					});
 			});
 		});
-	});
 
 
-	describe('/GET nested search obj[key]=value', () => {
-		it('it should GET a list of records with at least one pair key=value', (done) => {
 
-			let valueToFind = "3";
-			chai.request(api_home)
-			.get('/v1/' + testCollection + "?value=" + valueToFind + "&recursiveSearch=1")
-			.end((err, res) => {
-				res.should.have.status(200);
-				res.body.should.be.a('object').have.property("results").be.a("array");
+		describe('/GET key=[x, value, y, z]', function() {
+			it('it should GET a list of records with at the array defined by key containing at least one time the value', function(done) {
 
-				var isValid = false;
-				resultsLoop:
-				for(var i = 0; i < res.body.results.length; i++){
-					// console.log(res.body.results[i])
-					dataLoop:
-					for(var j = 0; j < res.body.results[i].data.length; j++){
-						// console.log(res.body.results[i].data[j])
-						valueLoop:
-						for(var k = 0; k < res.body.results[i].data[j].alphabet.length; k++){
-							// console.log(res.body.results[i].data[j].alphabet[k].value, valueToFind);
-							if(res.body.results[i].data[j].alphabet[k].value == valueToFind){
-								isValid = true;
-								break dataLoop;
+				let valueToFind = "peaches";
+				chai.request(api_home)
+					.get('/v1/' + testCollection)
+					.query({"meta.tags": valueToFind})
+					.end(function(err, res){
+						res.should.have.status(200);
+						res.body.should.be.a('object').have.property("results").be.a("array");
+
+						for(var i = 0; i < res.body.results.length; i++){
+							res.body.results[i].meta.tags.should.contains(valueToFind);
+						}
+
+						done();
+					});
+			});
+		});
+
+
+		describe('/GET nested search obj[key]=value', function() {
+			it('it should GET a list of records with at least one pair key=value', function(done){
+
+				let valueToFind = "3";
+				chai.request(api_home)
+				.get('/v1/' + testCollection)
+				.query({value: valueToFind, recursiveSearch: 1})
+				.end(function(err, res){
+					res.should.have.status(200);
+					res.body.should.be.a('object').have.property("results").be.a("array");
+
+					var isValid;
+					resultsLoop:
+					for(var i = 0; i < res.body.results.length; i++){
+						isValid = false;
+
+						dataLoop:
+						for(var j = 0; j < res.body.results[i].data.length; j++){
+							valueLoop:
+							for(var k = 0; k < res.body.results[i].data[j].alphabet.length; k++){
+								if(res.body.results[i].data[j].alphabet[k].value == valueToFind){
+									isValid = true;
+									break dataLoop;
+								}
 							}
 						}
+
+						isValid.should.be.ok;
 					}
 
-					isValid.should.be.ok;
-				}
-
-				done();
-				console.log("\tResponse: " + JSON.stringify(res.body.pagination) + "\n");
+					done();
+				});
 			});
 		});
+
 	});
 
-	// get all
-	describe('/GET ' + testCollection, () => {
-		it('it should GET a list of records', (done) => {
 
-			chai.request(api_home)
-				.get('/v1/' + testCollection)
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.be.a('object').have.property("results").be.a("array")
+	describe("CRUD OPERATIONS WITH WRONG PARAMS", function(){
+		this.timeout(10000);
 
-					validDocId = res.body.results[0]["_id"];
-					done();
-				});
+		// bad collection
+		describe('/GET notValidCollection', function() {
+			it('it should GET a empty list of records', function(done){
+
+				chai.request(api_home)
+					.get('/v1/notValidCollection')
+					.end(function(err, res) {
+						res.should.have.status(200);
+						res.body.should.be.a('object').have.property("results");
+						res.body.results.length.should.be.eql(0);
+
+						done();
+					});
+			});
 		});
-	});
 
-	// get one
-	describe('/GET/:docId ' + testCollection, () => {
-		it('it should GET one record', (done) => {
-			chai.request(api_home)
-				.get('/v1/' + testCollection + '/' + validDocId)
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.be.a('object').have.property("_id").eql(validDocId);
-					done();
-				});
+		// bad document
+		describe('/GET/:docId notValidCollection', function() {
+			it('it should return an INVALID_DOCUMENT_ID error', function(done) {
+
+				chai.request(api_home)
+					.get('/v1/notValidCollection/notValidDocument')
+					.end(function(err, res) {
+						res.should.have.status(400);
+						res.body.should.have.property("error").eql("INVALID_DOCUMENT_ID");
+
+						done();
+					});
+			});
 		});
-	});
 
-	// insert
-	describe('/POST ' + testCollection, () => {
-		it('it should INSERT one record in the db', (done) => {
-			chai.request(api_home)
-				.post('/v1/' + testCollection).send({name:"value"})
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.have.property("_id");
-					done();
-				});
+		// insert without data
+		describe('/POST notValidCollection', function(){
+			it('it should return error code 403 - Forbidden', function(done) {
+				chai.request(api_home)
+					.post('/v1/notValidCollection')
+					.end(function(err, res){
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+
+						done();
+					});
+			});
 		});
-	});
 
-	// update
-	describe('/PUT/:docId ' + testCollection, () => {
-		it('it should UPDATE one record in the db with name="new_value"', (done) => {
-			chai.request(api_home)
-				.put('/v1/' + testCollection + '/' + validDocId).send({description:"put_value"})
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(validDocId);
-					done();
-				});
+
+		// update with wrong id
+		describe('/PUT/:docId notValidCollection', function() {
+			it('it should return error code 403 - Forbidden', function(done) {
+
+				chai.request(api_home)
+					.put('/v1/notValidCollection/notValidDocument').send({"name":"put_value"})
+					.end(function(err, res) {
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+						done();
+					});
+			});
 		});
-	});
 
-	// update
-	describe('/PATCH/:docId ' + testCollection, () => {
-		it('it should UPDATE one record in the db with another_value="patch_value"', (done) => {
+		// update without id
+		describe('/PUT notValidCollection', function() {
+			it('it should return an INVALID_PATH error and status code 404', function(done) {
 
-			chai.request(api_home)
-				.patch('/v1/' + testCollection + '/' + validDocId).send({another_value:"patch_value"})
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(validDocId);
-					done();
-				});
+				chai.request(api_home)
+					.put('/v1/notValidCollection/').send({"name":"put_value"})
+					.end(function(err, res) {
+						res.should.have.status(404);
+						res.body.should.have.property("error").eql("INVALID_PATH");
+						done();
+					});
+			});
 		});
-	});
 
 
-	describe('/DELETE/:docId ' + testCollection, () => {
-		it('it should DELETE one record in the db', (done) => {
+		describe('/PATCH/:docId notValidCollection', function() {
+			it('it should return error code 403 - Forbidden', function(done) {
 
-			chai.request(api_home)
-				.delete('/v1/' + testCollection + '/' + validDocId)
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.have.property("_id").eql(validDocId);
-					done();
-				});
+				chai.request(api_home)
+					.patch('/v1/notValidCollection/notValidDocument').send({"name":"put_value"})
+					.end(function(err, res) {
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+						done();
+					});
+			});
 		});
-	});
 
-});
+		describe('/PATCH notValidCollection', function() {
+			it('it should return an INVALID_PATH error and status code 404', function(done) {
 
-
-
-/*
-	OPERATIONS WITH WRONG PARAMS
-*/
-describe("OPERATIONS WITH WRONG PARAMS - Using collection: nottestCollection\n", ()=>{
-	// bad collection
-	describe('/GET notValidCollection', () => {
-		it('it should GET a empty list of records', (done) => {
-
-			chai.request(api_home)
-				.get('/v1/notValidCollection')
-				.end((err, res) => {
-					res.should.have.status(200);
-					res.body.should.be.a('object').have.property("results");
-					res.body.results.length.should.be.eql(0);
-					done();
-				});
+				chai.request(api_home)
+					.patch('/v1/notValidCollection/').send({"name":"put_value"})
+					.end(function(err, res) {
+						res.should.have.status(404);
+						res.body.should.have.property("error").eql("INVALID_PATH");
+						done();
+					});
+			});
 		});
-	});
 
 
-	// bad document
-	describe('/GET/:docId notValidCollection', () => {
-		it('it should GET an INVALID_DOCUMENT_ID error', (done) => {
+		describe('/DELETE/:docId notValidCollection', function() {
+			it('it should return error code 403 - Forbidden', function(done) {
 
-			chai.request(api_home)
-				.get('/v1/notValidCollection/notValidDocument')
-				.end((err, res) => {
-					res.should.have.status(400);
-					res.body.should.have.property("error").eql("INVALID_DOCUMENT_ID");
-					done();
-				});
+				chai.request(api_home)
+					.delete('/v1/notValidCollection/notValidDocument')
+					.end(function(err, res) {
+						res.should.have.status(403);
+						res.body.should.have.property("error").eql("Forbidden");
+						done();
+					});
+			});
 		});
-	});
 
-	// insert without data
-	describe('/POST notValidCollection', () => {
-		it('it shouldn\'t POST with NO_DATA_PROVIDED error', (done) => {
-			chai.request(api_home)
-				.post('/v1/notValidCollection')
-				.end((err, res) => {
-					res.should.have.status(400);
-					res.body.should.have.property("error").eql("NO_DATA_PROVIDED");
-					done();
-				});
+
+		describe('/DELETE notValidCollection', function() {
+			it('it should return an INVALID_PATH error and status code 404', function(done) {
+
+				chai.request(api_home)
+					.delete('/v1/notValidCollection')
+					.end(function(err, res) {
+						res.should.have.status(404);
+						res.body.should.have.property("error");
+						done();
+					});
+			});
 		});
+
 	});
 
-	// update with wrong id
-	describe('/PUT/:docId notValidCollection', () => {
-		it('it should return ERROR and status code 500', (done) => {
-
-			chai.request(api_home)
-				.put('/v1/notValidCollection/notValidDocument').send({"name":"put_value"})
-				.end((err, res) => {
-					res.should.have.status(500);
-					res.body.should.have.property("error");
-					done();
-				});
-		});
-	});
-
-	// update without id
-	describe('/PUT notValidCollection', () => {
-		it('it should return an INVALID_PATH error and status code 404', (done) => {
-
-			chai.request(api_home)
-				.put('/v1/notValidCollection/').send({"name":"put_value"})
-				.end((err, res) => {
-					res.should.have.status(404);
-					res.body.should.have.property("error").eql("INVALID_PATH");
-					done();
-				});
-		});
-	});
-
-
-	describe('/PATCH/:docId notValidCollection', () => {
-		it('it should return ERROR and status code 500', (done) => {
-
-			chai.request(api_home)
-				.patch('/v1/notValidCollection/notValidDocument').send({"name":"put_value"})
-				.end((err, res) => {
-					res.should.have.status(500);
-					res.body.should.have.property("error");
-					done();
-				});
-		});
-	});
-
-	describe('/PATCH notValidCollection', () => {
-		it('it should return an INVALID_PATH error and status code 404', (done) => {
-
-			chai.request(api_home)
-				.patch('/v1/notValidCollection/').send({"name":"put_value"})
-				.end((err, res) => {
-					res.should.have.status(404);
-					res.body.should.have.property("error").eql("INVALID_PATH");
-					done();
-				});
-		});
-	});
-
-	describe('/DELETE/:docId notValidCollection', () => {
-		it('it should return ERROR and status code 500', (done) => {
-
-			chai.request(api_home)
-				.delete('/v1/notValidCollection/notValidDocument')
-				.end((err, res) => {
-					res.should.have.status(500);
-					res.body.should.have.property("error")
-					done();
-				});
-		});
-	});
-
-
-	describe('/DELETE notValidCollection', () => {
-		it('it should return an INVALID_PATH error and status code 404', (done) => {
-
-			chai.request(api_home)
-				.delete('/v1/notValidCollection')
-				.end((err, res) => {
-					res.should.have.status(404);
-					res.body.should.have.property("error")
-					done();
-				});
-		});
-	});
-
-	after(()=>{
-		mongoose.connection.db.dropCollection(testCollection, function(err, result){});
+	after(function(){
+		mongoose.connection.db.dropCollection(testCollection);
 	});
 });
