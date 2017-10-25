@@ -740,6 +740,8 @@ module.exports = function( options ) {
                   });
 
                   cursor.on('end', function () {
+                    logger.info("Sending response... ");
+
                     var slice = docs.slice( (page-1)*pageSize, docs.length );
                     res.json({
                       results: slice,
@@ -758,6 +760,7 @@ module.exports = function( options ) {
                     opSegments = null;
                     DataObject = null;
                     recursiveSearch = false;
+                    logger.info("ok");
                   });
                 }else{
                   DataObject.find( queryString ).count( function( e, total ) {
@@ -771,6 +774,8 @@ module.exports = function( options ) {
 
                     // Run query
                     query.exec( function( err2, docs ) {
+                      logger.info("Sending response... ");
+
                       if( err2 ) {
                         return next( err2 );
                       }
@@ -793,6 +798,8 @@ module.exports = function( options ) {
                       opSegments = null;
                       DataObject = null;
                       recursiveSearch = false;
+
+                      logger.info("ok");
                     });
                   });
                 }
