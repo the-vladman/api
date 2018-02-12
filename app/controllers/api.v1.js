@@ -4,14 +4,12 @@
 // Dependencies
 var _ = require('underscore');
 var async = require('async');
-var helpers = require('../../helpers');
 var mongoose = require('mongoose');
 var uuid = require('node-uuid');
 var NodeRSA = require('node-rsa');
 
 // Required models
 var Consumer = mongoose.model('Consumer');
-var RSAKey = mongoose.model('RSAKey');
 
 // DataObject schema
 // Empty/flexible schema used to interact with different data
@@ -601,7 +599,7 @@ module.exports = function(options) {
         return next(error);
       });
     },
-    
+
     forbidden: function(req, res, next){
       var error = new Error("Forbidden");
       error.status = 403;
