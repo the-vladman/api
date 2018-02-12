@@ -5,8 +5,6 @@
 var _ = require('underscore');
 var async = require('async');
 var mongoose = require('mongoose');
-var uuid = require('node-uuid');
-var NodeRSA = require('node-rsa');
 
 // Required models
 var Consumer = mongoose.model('Consumer');
