@@ -8,46 +8,46 @@
 'use strict';
 
 // Load required modules
-var _ = require( 'underscore' );
-var colors = require( 'colors' );
-var fs = require( 'fs' );
-var path = require( 'path' );
-var bunyan = require( 'bunyan' );
-var mongoose = require( 'mongoose' );
-var info = require( './package' );
+var _ = require('underscore');
+var colors = require('colors');
+var fs = require('fs');
+var path = require('path');
+var bunyan = require('bunyan');
+var mongoose = require('mongoose');
+var info = require('./package');
 
 // Express and middleware
-var express = require( 'express' );
-var compression = require( 'compression' );
-var bodyParser = require( 'body-parser' );
-var cookieParser = require( 'cookie-parser' );
+var express = require('express');
+var compression = require('compression');
+var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 
 // Constructor method
-function BudaFront( config ) {
+function BudaFront(config) {
   // Runtime configuration holder
-  this.config = _.defaults( config, BudaFront.DEFAULTS );
+  this.config = _.defaults(config, BudaFront.DEFAULTS);
 
   // App logging interface
   this.logger = bunyan.createLogger({
-    name:   'buda-front',
+    name: 'buda-front',
     stream: process.stdout,
-    level:  'debug'
+    level: 'debug'
   });
 
   // HTTP server instance
   this.server = express();
-  this.server.disable( 'x-powered-by' );
-  this.server.use( compression() );
-  this.server.use( cookieParser() );
-  this.server.use( bodyParser.json() );
+  this.server.disable('x-powered-by');
+  this.server.use(compression());
+  this.server.use(cookieParser());
+  this.server.use(bodyParser.json());
 
   // Allow CORS and set version header
-  this.server.use( function( req, res, next ) {
+  this.server.use(function(req, res, next) {
     var headers = 'Origin, X-Requested-With, Content-Type, Accept';
 
-    res.header( 'Access-Control-Allow-Origin', '*' );
-    res.header( 'Access-Control-Allow-Headers', headers );
-    res.header( 'X-BUDA-Version', info.version );
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', headers);
+    res.header('X-BUDA-Version', info.version);
     next();
   });
 }
@@ -57,18 +57,18 @@ function BudaFront( config ) {
 // - Only 'root' can bind to ports lower than 1024 but running this
 //   process as a privileged user is not advaised ( or required )
 BudaFront.DEFAULTS = {
-  port:    8000,
+  port: 8000,
   storage: 'localhost:27017/buda',
-  title:   'BUDA',
-  desc:    'Handled data catalog'
+  title: 'BUDA',
+  desc: 'Handled data catalog'
 };
 
 // Show usage information
 BudaFront.prototype.printHelp = function() {
-  console.log( colors.green.bold( 'Buda Front ver. ' + info.version ) );
-  console.log( colors.white.bold( 'Available configuration options are:' ) );
-  _.each( BudaFront.DEFAULTS, function( val, key ) {
-    console.log( colors.gray( '\t' + key + '\t' + val ) );
+  console.log(colors.green.bold('Buda Front ver. ' + info.version));
+  console.log(colors.white.bold('Available configuration options are:'));
+  _.each(BudaFront.DEFAULTS, function(val, key) {
+    console.log(colors.gray('\t' + key + '\t' + val));
   });
 };
 
@@ -77,10 +77,10 @@ BudaFront.prototype.exit = function() {
   var self = this;
 
   // Close storage connection and exit
-  self.logger.info( 'Stopping server' );
-  mongoose.connection.close( function() {
-    self.logger.debug( 'Storage disconnected' );
-    self.logger.debug( 'Bye' );
+  self.logger.info('Stopping server');
+  mongoose.connection.close(function() {
+    self.logger.debug('Storage disconnected');
+    self.logger.debug('Bye');
     process.exit();
   });
 };
@@ -92,44 +92,44 @@ BudaFront.prototype.start = function() {
   var server = self.server;
 
   // Looking for help ?
-  if( _.has( self.config, 'h' ) || _.has( self.config, 'help' ) ) {
+  if (_.has(self.config, 'h') || _.has(self.config, 'help')) {
     self.printHelp();
     process.exit();
   }
 
   // Log config
-  logger.info( 'Buda Front ver. ' + info.version );
+  logger.info('Buda Front ver. ' + info.version);
   logger.debug({
     config: self.config
-  }, 'Starting with configuration' );
+  }, 'Starting with configuration');
 
   // Connect to DB
-  logger.info( 'Establishing database connection: %s', self.config.storage );
-  mongoose.connect( 'mongodb://' + self.config.storage );
+  logger.info('Establishing database connection: %s', self.config.storage);
+  mongoose.connect('mongodb://' + self.config.storage);
 
   // Load application models
-  logger.info( 'Loading application models' );
-  fs.readdirSync( path.join( __dirname, 'app/models/' ) ).forEach( function( model ) {
-    logger.debug( 'Loading model: %s', model );
-    require( './app/models/' + path.basename( model, '.js' ) );
+  logger.info('Loading application models');
+  fs.readdirSync(path.join(__dirname, 'app/models/')).forEach(function(model) {
+    logger.debug('Loading model: %s', model);
+    require('./app/models/' + path.basename(model, '.js'));
   });
 
   // Load application routers
-  logger.info( 'Loading application routers' );
-  fs.readdirSync( path.join( __dirname, 'app/routers/' ) ).forEach( function( router ) {
-    var route = path.basename( router, '.js' );
+  logger.info('Loading application routers');
+  fs.readdirSync(path.join(__dirname, 'app/routers/')).forEach(function(router) {
+    var route = path.basename(router, '.js');
 
-    logger.debug( 'Loading router: %s', route );
-    server.use( '/' + route, require( './app/routers/' + route )({
+    logger.debug('Loading router: %s', route);
+    server.use('/' + route, require('./app/routers/' + route)({
       logger: logger,
       config: self.config
-    }) );
+    }));
   });
 
   // Custom 404 error
-  server.use( function( req, res, next ) {
-    logger.debug( 'Invalid path' );
-    res.status( 404 );
+  server.use(function(req, res, next) {
+    logger.debug('Invalid path');
+    res.status(404);
     res.json({
       error: 'INVALID_PATH'
     });
@@ -137,9 +137,9 @@ BudaFront.prototype.start = function() {
   });
 
   // Global error handler
-  server.use( function( err, req, res, next ) {
-    logger.fatal( err, 'Unexpected error' );
-    res.status( err.status || 500 );
+  server.use(function(err, req, res, next) {
+    logger.fatal(err, 'Unexpected error');
+    res.status(err.status || 500);
     res.json({
       error: err.message
     });
@@ -147,13 +147,13 @@ BudaFront.prototype.start = function() {
   });
 
   // Start listening for requests
-  logger.info( 'Listening for requests on port: %s', self.config.port );
-  server.listen( self.config.port );
+  logger.info('Listening for requests on port: %s', self.config.port);
+  server.listen(self.config.port);
 
   // Listen for interruptions and gracefully shutdown
   process.stdin.resume();
-  process.on( 'SIGINT', _.bind( this.exit, this ) );
-  process.on( 'SIGTERM', _.bind( this.exit, this ) );
+  process.on('SIGINT', _.bind(this.exit, this));
+  process.on('SIGTERM', _.bind(this.exit, this));
 };
 
 // Exports constructor method

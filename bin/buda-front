@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Buda Front ( bin )
+ // Buda Front ( bin )
 // ====================
 // CLI program to run a buda-front instance
 'use strict';
 
 // Dependencies
-var _ = require( 'underscore' );
-var minimist = require( 'minimist' );
-var BudaFront = require( '../server' );
+var _ = require('underscore');
+var minimist = require('minimist');
+var BudaFront = require('../server');
 var config;
 var front;
 var linkedStorage;
@@ -17,23 +17,25 @@ process.title = 'buda-front';
 
 // User linked storage container if avaiable
 // --link CONTAINER:storage
-if( process.env.STORAGE_PORT ) {
-  linkedStorage = process.env.STORAGE_PORT.replace( 'tcp://', '' );
+if (process.env.STORAGE_PORT) {
+  linkedStorage = process.env.STORAGE_PORT.replace('tcp://', '');
   process.env.BUDA_FRONT_STORAGE = linkedStorage + '/buda';
 }
 
 // Determine runtime configuration: defaults | ENV | CLI
-config = _.clone( BudaFront.DEFAULTS );
-_.each( config, function( val, key ) {
-  if( process.env[ 'BUDA_FRONT_' + key.toUpperCase() ] ) {
-    config[ key ] = process.env[ 'BUDA_FRONT_' + key.toUpperCase() ];
+config = _.clone(BudaFront.DEFAULTS);
+_.each(config, function(val, key) {
+  if (process.env['BUDA_FRONT_' + key.toUpperCase()]) {
+    config[key] = process.env['BUDA_FRONT_' + key.toUpperCase()];
   }
 });
-config = minimist( process.argv.slice( 2 ), { default: config });
+config = minimist(process.argv.slice(2), {
+  default: config
+});
 delete config._;
 
 // Create and start front instance
-front = new BudaFront( config );
+front = new BudaFront(config);
 front.start();
 
 module.exports = front; // for testing
