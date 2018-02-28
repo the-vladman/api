@@ -2,14 +2,9 @@
 import { success, notFound } from '../../services/response/'
 import { makeObject } from '../../services/dataCollection/'
 import mongoose from 'mongoose'
-
 import aqp from 'api-query-params'
 
-export const index = ({ querymen: { query, select, cursor } }, res, next) =>
-  res.status(200).json([])
 
-export const show = ({ params }, res, next) =>
-  res.status(200).json({})
 
 export const queries = (req, res, next) => {
   console.log('req.query', req.query);
@@ -31,3 +26,7 @@ export const queries = (req, res, next) => {
     .then(success(res))
     .catch(next)
 }
+
+
+export const index = ({ querymen: { query, select, cursor } }, res, next) =>
+  res.status(200).json([])

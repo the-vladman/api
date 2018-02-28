@@ -1,7 +1,12 @@
 import { Router } from 'express'
-import { queries} from './controller'
+import { middleware as query } from 'querymen'
+import { index, queries } from './controller'
 
 const router = new Router()
+
+router.get('/',
+  query(),
+  index)
 
 /**
  * @api {get} /org/:id Retrieve org
