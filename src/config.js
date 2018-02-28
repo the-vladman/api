@@ -44,7 +44,7 @@ const config = {
   },
   development: {
     mongo: {
-      uri: 'mongodb://10.20.55.7:8010/buda',
+      uri: 'mongodb://localhost/api-dev',
       options: {
         debug: true
       }
