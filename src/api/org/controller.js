@@ -9,6 +9,12 @@ export const queries = (req, res, next) => {
   const max_page_size = 100
   const DataObject = makeObject(req.params.dataCollection)
   const query = aqp(req.query)
+  if (query.filter.pagesize) {
+    query.limit = query.filter.pagesize
+    delete query.filter.pagesize
+  }else{
+    query.limit = max_page_size
+  }
   console.log('Query', query)
   DataObject.count(query.filter)
     .then(total =>
