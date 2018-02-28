@@ -36,7 +36,11 @@ export const queries = (req, res, next) => {
       .sort(query.sort)
       .select(query.projection)
       .then((DataObjects) => ({
-        total,
+        pagination:{
+          pagesize: query.limit,
+          page: parseInt((query.skip || 0) / query.limit) + 1,
+          total
+        },
         results: DataObjects.map((DataObject) => DataObject)
       }))
     )
