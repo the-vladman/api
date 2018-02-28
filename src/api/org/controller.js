@@ -15,6 +15,17 @@ export const queries = (req, res, next) => {
   }else{
     query.limit = max_page_size
   }
+  if (query.filter.page) {
+    var aux = parseInt(query.filter.page)
+
+    if(aux > 0){
+      --aux
+    }else{
+      aux = 1
+    }
+    query.skip = aux * query.limit
+    delete query.filter.page
+  }
   console.log('Query', query)
   DataObject.count(query.filter)
     .then(total =>
