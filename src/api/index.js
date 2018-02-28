@@ -3,7 +3,7 @@ import org from './org'
 
 const router = new Router()
 
-router.use('/org', org)
+router.use('/', org)
 
 /**
  * @apiDefine master Master access only
