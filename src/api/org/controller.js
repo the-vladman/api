@@ -5,28 +5,27 @@ import mongoose from 'mongoose'
 import aqp from 'api-query-params'
 
 
-
 export const queries = (req, res, next) => {
-  console.log('req.query', req.query);
+  const max_page_size = 100
   const DataObject = makeObject(req.params.dataCollection)
   const query = aqp(req.query)
-  console.log('Query', query);
-  DataObject.find(query.filter)
-    .skip(query.skip)
-    .limit(query.limit)
-    .sort(query.sort)
-    .select(query.projection)
-  // DataObject.count(filter)
-  //   .then(count => DataObject.find(filter)
-  //     .then((DataObjects) => ({
-  //       count,
-  //       results: DataObjects.map((DataObject) => DataObject)
-  //     }))
-  //   )
+  console.log('Query', query)
+  DataObject.count(query.filter)
+    .then(total =>
+      DataObject
+      .find(query.filter)
+      .skip(query.skip)
+      .limit(query.limit || max_page_size)
+      .sort(query.sort)
+      .select(query.projection)
+      .then((DataObjects) => ({
+        total,
+        results: DataObjects.map((DataObject) => DataObject)
+      }))
+    )
     .then(success(res))
     .catch(next)
 }
-
 
 export const index = ({ querymen: { query, select, cursor } }, res, next) =>
   res.status(200).json([])
