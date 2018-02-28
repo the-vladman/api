@@ -32,7 +32,7 @@ export const queries = (req, res, next) => {
       DataObject
       .find(query.filter)
       .skip(query.skip)
-      .limit(query.limit || max_page_size)
+      .limit(query.limit)
       .sort(query.sort)
       .select(query.projection)
       .then((DataObjects) => ({
