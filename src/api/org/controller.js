@@ -9,9 +9,9 @@ export const queries = (req, res, next) => {
   const max_page_size = 100
   const DataObject = makeObject(req.params.dataCollection)
   const query = aqp(req.query)
-  if (query.filter.pagesize) {
-    query.limit = query.filter.pagesize
-    delete query.filter.pagesize
+  if (query.filter.pageSize) {
+    query.limit = query.filter.pageSize
+    delete query.filter.pageSize
   }else{
     query.limit = max_page_size
   }
@@ -26,7 +26,6 @@ export const queries = (req, res, next) => {
     query.skip = aux * query.limit
     delete query.filter.page
   }
-  console.log('Query', query)
   DataObject.count(query.filter)
     .then(total =>
       DataObject
@@ -37,7 +36,7 @@ export const queries = (req, res, next) => {
       .select(query.projection)
       .then((DataObjects) => ({
         pagination:{
-          pagesize: query.limit,
+          pageSize: query.limit,
           page: parseInt((query.skip || 0) / query.limit) + 1,
           total
         },
