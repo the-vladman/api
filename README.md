@@ -87,7 +87,7 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 2. `/api/dataset?parametro=PM10&estacionesid=300&date-insert>=2018-02-18&date-insert<=2018-02-19&pagezise=50`
 3. `/api/dataset?filter={"$or":[{"key1":"value1"},{"key2":"value2"}]}`
 
-####### Limitar campos devueltos
+###### Limitar campos devueltos
 * Solo devolver id y url: `/api/dataset?fields=id,url`
 * Devolver todo menos id y url: `/api/dataset?fields=-id,-url`
 
@@ -98,11 +98,11 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 
 #### Orden
 
-- Útil para ordenar los registros devueltos.
-- La clave de operador predeterminada es `sort`.
-- Acepta una lista de campos separados por comas.
-- El comportamiento predeterminado es clasificar en orden ascendente.
-- Use los prefijos `-` para ordenar en orden descendente.
+- Útil para ordenar los registros devueltos
+- La clave de operador predeterminada es `sort`
+- Acepta una lista de campos separados por comas
+- El comportamiento predeterminado es clasificar en orden ascendente
+- Use los prefijos `-` para ordenar en orden descendente
 
 ###### Ejemplo
 `/api/dataset?sort=-points,createdAt`
