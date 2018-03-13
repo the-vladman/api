@@ -17,7 +17,7 @@ Donde:
 Un ejemplo de una ruta con todos sus componentes:
 
 ```
-https://api.datos.gob.mx/v1/carto.veracruz.calles/544ef78ba5b815b79673d885
+https://api.datos.gob.mx/v1/sinaica/595554a559954a0adb045d7e
 ```
 
 Otras consideraciones importantes:
@@ -93,7 +93,7 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 
 #### Paginación
 - pageSize: Indica el la cantidad de los registros devueltos. Por Default el número es `100`.
-- page: Indica el incio de los registros devueltos. Por Defaultel número es `1`.
+- page: Indica el indice de los registros devueltos. Por Default el número es `1`.
 
 
 #### Orden
