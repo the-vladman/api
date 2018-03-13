@@ -5,19 +5,18 @@ Implementa el punto de acceso a todos los datos procesados y almacenados por BUD
 Las rutas son estructuradas utilizando la colección de datos sobre la que se este trabajando de la siguiente forma:
 
 ```
-BUDA_FRONT_ACCESS/API_VERSION/data.collection/doc.id
+BUDA_FRONT_ACCESS/API_VERSION/data.collection
 ```
 
 Donde:
 
 - __BUDA_FRONT_ACCESS__: Protocolo + IP/dominio + puerto donde el proceso front esta escuchando por peticiones
 - __data.collection__: Colección de datos sobre la cual se esté trabajando
-- __doc.id__: ID del documento específico sobre el cual se esté trabajando, en caso de ser relevante para la operación en cuestión
 
 Un ejemplo de una ruta con todos sus componentes:
 
 ```
-https://api.datos.gob.mx/v1/sinaica/595554a559954a0adb045d7e
+https://api.datos.gob.mx/v2/sinaica
 ```
 
 Otras consideraciones importantes:
@@ -101,7 +100,7 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 - Útil para ordenar los registros devueltos
 - La clave de operador predeterminada es `sort`
 - Acepta una lista de campos separados por comas
-- El comportamiento predeterminado es clasificar en orden ascendente
+- El comportamiento predeterminado es clasificar en orden ascendentecual
 - Use los prefijos `-` para ordenar en orden descendente
 
 ###### Ejemplo
