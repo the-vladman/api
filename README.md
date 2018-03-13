@@ -82,13 +82,13 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 | `$regex` | `key!=/value/<opts>` | `phone!=/^06/` | `{filter: {phone: { $not: /^06/}}}` |
 
 ##### Ejemplo
-1. `/api/dataset?date-insert>2018-01-01&pagesize=50&sort=-date-insert`
-2. `/api/dataset?parametro=PM10&estacionesid=300&date-insert>=2018-02-18&date-insert<=2018-02-19&pagezise=50`
-3. `/api/dataset?filter={"$or":[{"key1":"value1"},{"key2":"value2"}]}`
+1. `/v2/(_data.collection_)?date-insert>2018-01-01&pagesize=50&sort=-date-insert`
+2. `/v2/(_data.collection_)?parametro=PM10&estacionesid=300&date-insert>=2018-02-18&date-insert<=2018-02-19&pagezise=50`
+3. `/v2/(_data.collection_)?filter={"$or":[{"key1":"value1"},{"key2":"value2"}]}`
 
 ###### Limitar campos devueltos
-* Solo devolver id y url: `/api/dataset?fields=id,url`
-* Devolver todo menos id y url: `/api/dataset?fields=-id,-url`
+* Solo devolver id y url: `/v2/(_data.collection_)?fields=id,url`
+* Devolver todo menos id y url: `/v2/(_data.collection_)?fields=-id,-url`
 
 #### Paginación
 - pageSize: Indica el la cantidad de los registros devueltos. Por Default el número es `100`.
@@ -104,4 +104,4 @@ Para expresar condiciones mas complejas que la igualdad absoluta, se pueden util
 - Use los prefijos `-` para ordenar en orden descendente
 
 ###### Ejemplo
-`/api/dataset?sort=-points,createdAt`
+`/v2/(_data.collection_)?sort=-points,createdAt`
