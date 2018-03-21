@@ -1,16 +1,17 @@
-# BUDA FRONT v2
+# API v2
 
-Implementa el punto de acceso a todos los datos procesados y almacenados por BUDA en las distintas zonas disponibles mediante una interfaz HTTP(S) tipo REST.
+Implementa el punto de acceso a todos los datos procesados y almacenados por datos.gob.mx en las distintas zonas disponibles mediante una interfaz HTTP(S) tipo REST.
 
 Las rutas son estructuradas utilizando la colección de datos sobre la que se este trabajando de la siguiente forma:
 
 ```
-BUDA_FRONT_ACCESS/API_VERSION/data.collection
+API/API_VERSION/data.collection
 ```
 
 Donde:
 
-- __BUDA_FRONT_ACCESS__: Protocolo + IP/dominio + puerto donde el proceso front esta escuchando por peticiones
+- __API__: Protocolo + IP/dominio + puerto donde el proceso front esta escuchando por peticiones
+- __API_VERSION__: Versión del API que se desea usar
 - __data.collection__: Colección de datos sobre la cual se esté trabajando
 
 Un ejemplo de una ruta con todos sus componentes:
