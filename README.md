@@ -58,6 +58,21 @@ Todas las operaciones que se determinan en alguna condición de error regresan u
 - Los errores del lado del cliente devuelven un encabezado __4xx__ y deberán ser corregidos en la implementación del cliente.
 - Los errores del lado del servicio devuelven un encabezado __5xx__ y deberán ser reportados como una incidencia a revisión.
 
+
+## Tipo de variables
+Cuando una llamada se hace al API, este por defecto castea automaticamente los siguientes tipos de valores:
+* Numero
+* Expresión regular
+* Fecha
+* Booleano
+* Texto vacio
+
+Si deseas omitir este casteo automatico para poder hacer una igualdad con un número en formato string puedes usar una de las siguientes funciones:
+* string(2890)
+* date(2017-10-01)
+
+``/v2/(_data.collection_)?key1=string(10)&key2=date(2017-10-01)``
+
 ## Operaciones
 ### GET
 Las consultas deberán ser realizadas contra el recurso de la colección de datos sobre la que se este trabajando y las condiciones ser expresadas como parte de la __cadena de consulta__ [Query String*](https://en.wikipedia.org/wiki/Query_string).
