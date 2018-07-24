@@ -1,6 +1,6 @@
 # API v2
-
-Implementa el punto de acceso a todos los datos procesados y almacenados por datos.gob.mx en las distintas zonas disponibles mediante una interfaz HTTP(S) tipo REST.
+Proyecto desarrollado para datos.gob.mx para mejorar tiempos de respuesta y manejo de colecciones masivas
+Implementa el punto de acceso a todos los datos procesados y almacenados mediante una interfaz HTTP(S) tipo REST.
 
 Las rutas son estructuradas utilizando la colección de datos sobre la que se este trabajando de la siguiente forma:
 
@@ -13,12 +13,6 @@ Donde:
 - __API__: Protocolo + IP/dominio + puerto donde el proceso front esta escuchando por peticiones
 - __API_VERSION__: Versión del API que se desea usar
 - __data.collection__: Colección de datos sobre la cual se esté trabajando
-
-Un ejemplo de una ruta con todos sus componentes:
-
-```
-https://api.datos.gob.mx/v2/sinaica
-```
 
 Otras consideraciones importantes:
 
